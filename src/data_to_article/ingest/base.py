@@ -7,12 +7,16 @@ import abc
 
 def normalize_article(doc: dict) -> dict:
     """把任意输入文档规范化为标准原始文章。"""
+    pub_time = str(doc.get("pub_time", "")).strip()
+    # 兼容旧格式 "YYYY-MM-DD HH:MM:SS" -> ISO "YYYY-MM-DDTHH:MM:SS"（保证字符串比较一致）
+    if " " in pub_time and pub_time[4] == "-":
+        pub_time = pub_time.replace(" ", "T", 1)
     out = {
         "title": str(doc.get("title", "")).strip(),
         "content": str(doc.get("content", "")).strip(),
         "url": str(doc.get("url", "")).strip(),
         "source": str(doc.get("source", "")).strip(),
-        "pub_time": str(doc.get("pub_time", "")).strip() or None,
+        "pub_time": pub_time or None,
     }
     for k, v in doc.items():
         if k not in out:

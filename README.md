@@ -6,7 +6,7 @@
 
 | 接口 | 说明 | 默认实现 |
 |---|---|---|
-| `StorageBackend` | 存储层（原始/清洗/事件/二创/运行记录） | `MongoBackend`（默认）+ `JsonFileBackend`（零依赖兜底） |
+| `StorageBackend` | 存储层（原始/清洗/事件/二创/运行记录/查重） | `MongoBackend`（默认）+ `JsonFileBackend`（零依赖兜底） |
 | `IngestSource` | 原始数据接入 | JSONL / CSV / Mongo 集合，可自定义 |
 | `BaseLLMClient` | LLM 调用（归类 + 二创） | `openai_compat` / `anthropic` / `gemini` / `mock`，可自定义 |
 
@@ -18,8 +18,25 @@ python -m data_to_article.cli ingest --file examples/sample_articles.jsonl
 python -m data_to_article.cli run --dry-run
 # 或安装为命令后
 dta ingest --file examples/sample_articles.jsonl
-dta run --dry-run
+dta run --hours 24
 ```
+
+## 命令
+
+| 命令 | 说明 |
+|---|---|
+| `dta ingest --file x.jsonl` | 导入原始数据（jsonl/csv/mongo） |
+| `dta wash --hours 24` | 清洗：清理/去重/系列过滤 -> 清洗产物 |
+| `dta classify --hours 168` | 归类：LLM 路由 -> 新建/并入事件 |
+| `dta generate --hours 168` | 二创：事件 -> 多视角文章 |
+| `dta run --only wash,classify,generate` | 一键全链路 |
+
+## 自定义接口
+
+- **自定义存储**：`config` 里 `storage.backend: my_backend` + `storage.module: mypkg.MyBackend`（继承 `StorageBackend`）。
+- **自定义 LLM**：`config` 里 `llm.provider: my_provider` + `llm.my_provider.module: mypkg.MyClient`（继承 `BaseLLMClient`）。
+- **自定义导入**：实现 `IngestSource` 并在 `data_to_article.ingest.registry.get_ingest` 注册。
+- **Prompt 模板**：`config/prompts/*.txt` 可直接编辑（不写代码调整二创/归类风格）。
 
 ## 安全声明
 
@@ -29,6 +46,6 @@ dta run --dry-run
 ## 路线图
 
 - [x] P0：骨架 + 三个接口 + file 存储 + mock LLM + CLI
-- [ ] P1：平移 清洗 / 归类 / 二创 业务模块并接入接口
-- [ ] P2：LLM 插件化完善 + prompt 模板外部化 + 配置统一 + 可选调度
+- [x] P1：平移 清洗 / 归类 / 二创 并接入接口（wash/classify/generate 可跑）
+- [ ] P2：LLM 插件化完善 + 运行记录增强 + 可选调度
 - [ ] P3：测试补齐 + CI + 文档 + 示例 + 可选 docker-compose

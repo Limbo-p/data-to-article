@@ -36,10 +36,22 @@ class StorageBackend(abc.ABC):
     def fetch_cleaned(self, since: Optional[str] = None, sources: Optional[list[str]] = None, limit: int = 0) -> list[dict]:
         """读取清洗后文章。"""
 
-    # ---- 查重指纹 ----
     @abc.abstractmethod
-    def content_fp_exists(self, fp: str) -> bool:
-        """指纹是否已存在（用于事件侧查重）。"""
+    def get_cleaned_by_fp(self, fp: str) -> Optional[dict]:
+        """按内容指纹取单篇清洗后文章。"""
+
+    # ---- 查重指纹（归类侧）----
+    @abc.abstractmethod
+    def claim_content_fp(self, fp: str) -> tuple:
+        """原子认领指纹，返回 (是否新认领, 已映射的 event_id)。"""
+
+    @abc.abstractmethod
+    def mark_content_fp(self, fp: str, event_id: str) -> None:
+        """标记指纹已归入事件。"""
+
+    @abc.abstractmethod
+    def release_content_fp(self, fp: str) -> None:
+        """释放指纹认领。"""
 
     # ---- 事件（归类写入/查询）----
     @abc.abstractmethod
@@ -48,7 +60,11 @@ class StorageBackend(abc.ABC):
 
     @abc.abstractmethod
     def update_event(self, event_id: str, event: dict) -> bool:
-        """按 event_id 更新事件。"""
+        """按 event_id 更新事件（部分字段合并）。"""
+
+    @abc.abstractmethod
+    def get_event(self, event_id: str) -> Optional[dict]:
+        """按 event_id 读取事件。"""
 
     @abc.abstractmethod
     def query_events(self, keyword: str = "", limit: int = 0) -> list[dict]:
@@ -56,8 +72,12 @@ class StorageBackend(abc.ABC):
 
     # ---- 二创产物 ----
     @abc.abstractmethod
-    def save_event_articles(self, event_id: str, articles: list[dict], version: int = 1) -> None:
-        """保存某事件的多视角二创文章，并写入历史版本。"""
+    def save_event_articles(self, event_id: str, articles: list[dict]) -> None:
+        """保存某事件的多视角二创文章；重新生成时旧版本自动归档（版本号自增）。"""
+
+    @abc.abstractmethod
+    def articles_exist(self, event_id: str) -> bool:
+        """事件是否已生成过二创文章。"""
 
     # ---- 运行记录 ----
     @abc.abstractmethod

@@ -31,6 +31,7 @@ class MongoBackend(StorageBackend):
     def _now() -> str:
         return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
+    # ---- raw ----
     def save_raw_articles(self, articles: list[dict]) -> int:
         if not articles:
             return 0
@@ -48,6 +49,7 @@ class MongoBackend(StorageBackend):
             cursor = cursor.limit(limit)
         return list(cursor)
 
+    # ---- cleaned ----
     def upsert_cleaned(self, articles: list[dict]) -> dict:
         from pymongo import UpdateOne
 
@@ -76,9 +78,44 @@ class MongoBackend(StorageBackend):
             cursor = cursor.limit(limit)
         return list(cursor)
 
+    def get_cleaned_by_fp(self, fp: str) -> Optional[dict]:
+        return self.c_cleaned.find_one({"content_fp": fp})
+
     def content_fp_exists(self, fp: str) -> bool:
         return self.c_cleaned.find_one({"content_fp": fp}) is not None
 
+    # ---- dedup ----
+    def claim_content_fp(self, fp: str) -> tuple:
+        from pymongo.errors import DuplicateKeyError
+
+        try:
+            res = self.c_fps.update_one(
+                {"content_fp": fp},
+                {"$setOnInsert": {
+                    "content_fp": fp, "event_id": "", "status": "pending",
+                    "claimed_at": self._now(),
+                }},
+                upsert=True,
+            )
+            if res.upserted_id is not None:
+                return True, ""
+            doc = self.c_fps.find_one({"content_fp": fp}, {"event_id": 1})
+            return False, (doc or {}).get("event_id", "")
+        except DuplicateKeyError:
+            return False, ""
+        except Exception:
+            return False, ""
+
+    def mark_content_fp(self, fp: str, event_id: str) -> None:
+        self.c_fps.update_one(
+            {"content_fp": fp},
+            {"$set": {"event_id": event_id, "status": "assigned", "assigned_at": self._now()}},
+        )
+
+    def release_content_fp(self, fp: str) -> None:
+        self.c_fps.delete_one({"content_fp": fp})
+
+    # ---- events ----
     def save_event(self, event: dict) -> str:
         eid = event.get("event_id") or _uuid.uuid4().hex
         doc = dict(event)
@@ -94,6 +131,9 @@ class MongoBackend(StorageBackend):
         )
         return res.matched_count > 0
 
+    def get_event(self, event_id: str) -> Optional[dict]:
+        return self.c_events.find_one({"event_id": event_id})
+
     def query_events(self, keyword: str = "", limit: int = 0) -> list[dict]:
         q = {}
         if keyword:
@@ -104,8 +144,11 @@ class MongoBackend(StorageBackend):
             cursor = cursor.limit(limit)
         return list(cursor)
 
-    def save_event_articles(self, event_id: str, articles: list[dict], version: int = 1) -> None:
+    # ---- articles ----
+    def save_event_articles(self, event_id: str, articles: list[dict]) -> None:
         now = self._now()
+        cur = self.c_articles.find_one({"event_id": event_id})
+        version = (len((cur or {}).get("versions", []) or []) + 1) if cur else 1
         self.c_articles.update_one(
             {"event_id": event_id},
             {
@@ -117,6 +160,10 @@ class MongoBackend(StorageBackend):
             upsert=True,
         )
 
+    def articles_exist(self, event_id: str) -> bool:
+        return self.c_articles.find_one({"event_id": event_id}, {"_id": 1}) is not None
+
+    # ---- runs ----
     def record_run(self, stage: str, status: str, params: dict, log_tail: str = "") -> None:
         self.c_runs.insert_one(
             {

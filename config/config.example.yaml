@@ -13,6 +13,44 @@
       "fps": "content_fps"
     }
   },
+  "sources": {
+    "default": {
+      "collection": "raw_articles",
+      "etl_collection": "articles",
+      "label": "默认来源",
+      "date_field": "pub_time",
+      "min_content": 20
+    },
+    "demo": {
+      "collection": "raw_articles",
+      "etl_collection": "articles",
+      "label": "演示来源",
+      "date_field": "pub_time",
+      "min_content": 20
+    }
+  },
+  "dedup": {
+    "enabled": true
+  },
+  "classification": {
+    "router": {
+      "batch_size": 12,
+      "candidate_days": 30,
+      "candidate_limit": 100,
+      "low_confidence_escalation": true
+    },
+    "llm": {
+      "enabled": true,
+      "event_overview": true,
+      "match": true,
+      "max_content_chars": 2000
+    }
+  },
+  "generation": {
+    "variants_per_event": 2,
+    "min_sources": 2,
+    "max_content_chars": 2000
+  },
   "llm": {
     "provider": "mock",
     "temperature": 0.7,
@@ -30,9 +68,16 @@
     "gemini": {
       "api_key_env": "GEMINI_API_KEY",
       "model": "gemini-2.0-flash"
+    },
+    "my_provider": {
+      "module": "",
+      "api_key_env": "MY_LLM_KEY",
+      "base_url": "https://example.com",
+      "model": "my-model"
     }
   },
   "pipeline": {
+    "stop_on_error": true,
     "stages": {
       "wash": {"enabled": true},
       "classify": {"enabled": true},

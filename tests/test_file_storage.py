@@ -37,6 +37,21 @@ class TestFileStorage(unittest.TestCase):
         self.assertEqual(r2["inserted"], 0)
         self.assertEqual(r2["updated"], 1)
         self.assertTrue(self.store.content_fp_exists("fp1"))
+        self.assertEqual(self.store.get_cleaned_by_fp("fp1")["title"], "t")
+
+    def test_dedup_claim_mark_release(self):
+        ok, eid = self.store.claim_content_fp("fp9")
+        self.assertTrue(ok)
+        ok2, eid2 = self.store.claim_content_fp("fp9")
+        self.assertFalse(ok2)
+        self.assertEqual(eid2, "")
+        self.store.mark_content_fp("fp9", "evt_x")
+        ok3, eid3 = self.store.claim_content_fp("fp9")
+        self.assertFalse(ok3)
+        self.assertEqual(eid3, "evt_x")
+        self.store.release_content_fp("fp9")
+        ok4, _ = self.store.claim_content_fp("fp9")
+        self.assertTrue(ok4)
 
     def test_events_and_articles(self):
         eid = self.store.save_event({"event_title": "evt", "keywords": ["k"]})
@@ -45,8 +60,10 @@ class TestFileStorage(unittest.TestCase):
         evs = self.store.query_events("evt2")
         self.assertEqual(len(evs), 1)
         self.assertEqual(evs[0]["event_id"], eid)
+        self.assertEqual(self.store.get_event(eid)["event_title"], "evt2")
         self.store.save_event_articles(eid, [{"title": "a1", "content": "x"}])
-        self.store.save_event_articles(eid, [{"title": "a2", "content": "y"}], version=2)
+        self.store.save_event_articles(eid, [{"title": "a2", "content": "y"}])
+        self.assertTrue(self.store.articles_exist(eid))
 
     def test_record_run(self):
         self.store.record_run("wash", "ok", {"hours": 1}, "tail")
