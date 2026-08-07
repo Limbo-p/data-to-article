@@ -1,0 +1,3 @@
+{"title":"示例新闻一：某公司发布财报","content":"这是一段示例正文，用于演示 ingest 流程。","url":"https://example.com/a1","source":"demo","pub_time":"2026-08-01T09:00:00"}
+{"title":"示例新闻二：行业政策发布","content":"这是另一段示例正文，不含真实信息。","url":"https://example.com/a2","source":"demo","pub_time":"2026-08-01T10:00:00"}
+{"title":"示例新闻三：市场动态","content":"第三段示例正文，用于验证多文档导入。","url":"https://example.com/a3","source":"demo","pub_time":"2026-08-01T11:00:00"}

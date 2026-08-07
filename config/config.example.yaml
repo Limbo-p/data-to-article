@@ -1,0 +1,42 @@
+{
+  "storage": {
+    "backend": "file",
+    "uri": "",
+    "database": "data_to_article",
+    "root": "data",
+    "collections": {
+      "raw": "raw_articles",
+      "cleaned": "articles",
+      "events": "events",
+      "event_articles": "event_articles",
+      "runs": "pipeline_runs",
+      "fps": "content_fps"
+    }
+  },
+  "llm": {
+    "provider": "mock",
+    "temperature": 0.7,
+    "max_tokens": 8192,
+    "openai_compat": {
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "base_url": "https://api.deepseek.com",
+      "model": "deepseek-chat"
+    },
+    "anthropic": {
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "base_url": "https://api.anthropic.com",
+      "model": "claude-sonnet-4-20250514"
+    },
+    "gemini": {
+      "api_key_env": "GEMINI_API_KEY",
+      "model": "gemini-2.0-flash"
+    }
+  },
+  "pipeline": {
+    "stages": {
+      "wash": {"enabled": true},
+      "classify": {"enabled": true},
+      "generate": {"enabled": true}
+    }
+  }
+}
