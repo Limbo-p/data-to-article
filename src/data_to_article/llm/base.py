@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
-import requests
 
 
 @dataclass
@@ -56,6 +55,10 @@ class BaseLLMClient(ABC):
         return f"{self.base_url}/v1/chat/completions"
 
     def chat(self, messages: list, system: str = "", temperature: Optional[float] = None, max_tokens: Optional[int] = None) -> LLMResponse:
+        try:
+            import requests
+        except ImportError:
+            raise RuntimeError("???? requests???????????? llm.provider=mock")
         payload = self._build_payload(
             messages,
             system,

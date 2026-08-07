@@ -28,7 +28,7 @@ def load_config(path: str | None = None) -> dict:
     cfg_path = Path(path) if path else DEFAULT_CONFIG
     if not cfg_path.exists():
         cfg_path = EXAMPLE_CONFIG
-    text = cfg_path.read_text(encoding="utf-8")
+    text = cfg_path.read_text(encoding="utf-8-sig")
     if yaml is not None:
         cfg = yaml.safe_load(text) or {}
     else:
