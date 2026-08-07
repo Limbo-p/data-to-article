@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "data-to-article"
 version = "0.1.0"
-license = "MIT"
+license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 description = "通用数据到文章流水线：清洗 -> 归类 -> 二创（Storage / Ingest / LLM 接口均可自定义）"
 readme = "README.md"
