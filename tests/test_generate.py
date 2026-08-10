@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -41,7 +42,7 @@ class TestGenerate(unittest.TestCase):
             "keywords": [], "overview": "概述", "category": "公司要闻",
             "articles": [{"content_fp": "fpA", "etl_collection": "demo", "title": "公司发布财报"}],
             "content_fps": ["fpA"], "etl_collections": ["demo"],
-            "updated_at": "2026-08-01T09:00:00",
+            "updated_at": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(timespec="seconds"),
         })
         return eid
 

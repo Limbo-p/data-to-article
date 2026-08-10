@@ -27,4 +27,18 @@ def get_ingest(config: dict, kind: str, **kwargs) -> IngestSource:
             window_hours=kwargs.get("window_hours", 0),
         )
 
+    if kind == "mysql":
+        from data_to_article.ingest.mysql import MySqlIngest
+
+        mcfg = config.get("mysql", {}) or {}
+        return MySqlIngest(
+            host=kwargs.get("host", "") or mcfg.get("host", ""),
+            port=kwargs.get("port", 0) or mcfg.get("port", 0),
+            user=kwargs.get("user", "") or mcfg.get("user", ""),
+            password=kwargs.get("password", "") or mcfg.get("password", ""),
+            database=kwargs.get("database", "") or mcfg.get("database", ""),
+            table=kwargs.get("collection", "") or kwargs.get("table", "") or mcfg.get("table", ""),
+            where=mcfg.get("where", ""),
+        )
+
     raise ValueError(f"未知导入类型: {kind}")

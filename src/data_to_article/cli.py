@@ -96,7 +96,7 @@ def main(argv=None) -> int:
     p_ingest = sub.add_parser("ingest", help="导入原始数据（jsonl/csv/mongo）")
     p_ingest.add_argument("--config", default="")
     p_ingest.add_argument("--file", default="")
-    p_ingest.add_argument("--format", choices=["jsonl", "csv", "mongo"], default="jsonl")
+    p_ingest.add_argument("--format", choices=["jsonl", "csv", "mongo", "mysql"], default="jsonl")
     p_ingest.add_argument("--source", default="", help="mongo 集合名")
     p_ingest.add_argument("--limit", type=int, default=0)
 

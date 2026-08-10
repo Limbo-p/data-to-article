@@ -21,6 +21,10 @@ dev = [
     "pytest>=8.0.0",
     "ruff>=0.4.0",
 ]
+mysql = [
+    "pymysql>=1.0",
+]
+
 
 [project.scripts]
 dta = "data_to_article.cli:main"
