@@ -79,26 +79,82 @@ dta run
 
 > 注意：MySQL 文档以 JSON 列存储（要求 MySQL 5.7+）；切换存储后端不会自动迁移数据。
 
-## 总控面板（dta serve）
+## 使用方式（总控面板 dta serve）
 
-浏览器控制台：**初始化（选存储 / LLM / Key / 调度）→ 流水线运行 → 实时日志 → 运行历史**。
+浏览器控制台，六页完整功能：**概览 / 流水线 / 事件库 / 审核发布 / 搜索阅读 / 系统**。
+
+### 1) 启动面板
 
 ```bash
-# 方式一：启动脚本（自动装依赖并起服务）
 ./scripts/start_panel.sh          # Linux / macOS
 .\scripts\start_panel.ps1        # Windows
-
-# 方式二：直接命令
+# 或
 dta serve --host 127.0.0.1 --port 8765
-
 # 打开 http://127.0.0.1:8765
-# 首次使用：到「设置」完成初始化（存储后端 / LLM API Key / 调度时间）→ 保存
-# 然后到「流水线」运行 清洗 → 归类 → 二创
 ```
 
-- 设置保存在 `config/config.yaml` + `config/.env`（密钥已 gitignore）；
-- 面板执行 = 调用 `dta run`，与命令行完全一致；
-- 面板默认只监听本机 `127.0.0.1`，服务器部署请自行加反向代理与鉴权。
+### 2) 首次初始化（系统页）
+
+| 步骤 | 操作 |
+|---|---|
+| ① 存储 | 选 file / mongo / mysql → 填连接参数 → 测试连接 |
+| ② 集合名自定义（连旧库时） | 映射 清洗/归类/二创 集合名（支持多个，逗号分隔；如 `etl_results_sina,etl_results_yi_cai`、`ai_events`、`event_articles`） |
+| ③ LLM | provider / base_url / model / API Key |
+| ④ 调度 | 每日 10:00 清洗+归类、14:00 二创（可选） |
+| 保存 | 写 `config/config.yaml` + `config/.env`（密钥已 gitignore） |
+
+### 3) 面板功能
+
+| 页 | 功能 |
+|---|---|
+| 概览 | 三库统计、最近事件、最近运行 |
+| 流水线 | 选阶段 → 运行/试运行 → 实时日志(SSE) → 运行历史 |
+| 事件库 | 搜索、列表（已生成/未生成）、详情（参考原文 + 二创文章）、单事件生成、版本回滚 |
+| 审核发布 | ① 待审核（通过/驳回）② 待发布（发布/预览）③ 发布记录 ④ 发布设置（自定义 URL/Headers/Defaults） |
+| 搜索阅读 | 左右布局阅读器：**事件阅读器**（参考原文）/ **审核阅读器**（二创），参考原文按 content_fp 跨多个清洗集合解析 |
+| 系统 | 存储 / LLM / 调度 / 集合名 初始化 |
+
+### 4) 命令行用法（不用面板时）
+
+```bash
+dta ingest --format mongo --source results_sina   # 导入（输入决定三库存储）
+dta run --only wash,classify,generate             # 一键全链
+dta wash --hours 24                               # 单阶段
+dta generate --event evt_xxx                      # 单事件生成
+dta serve                                         # 起面板
+```
+
+### 5) 程序内调用
+
+```python
+from data_to_article.cli import main
+main(["run", "--only", "wash,classify,generate", "--dry-run"])
+```
+
+### 6) 定时调度
+
+```bash
+# Linux cron（每天 10:00 清洗+归类，14:00 二创）
+0 10 * * * cd /path/data-to-article && dta run --only wash,classify
+0 14 * * * cd /path/data-to-article && dta run --only generate
+# Windows 计划任务同理，命令换成 dta run ...
+```
+
+### 7) 数据位置
+
+| 后端 | 清洗库 | 归类库 | 二创库 | 运行记录 |
+|---|---|---|---|---|
+| file | `data/cleaned/` | `data/events/` | `data/articles/` | `data/runs/` |
+| mongo | 集合（可自定义） | 集合（可自定义） | 集合（可自定义） | `pipeline_runs` |
+| mysql | `dta_cleaned` | `dta_events` | `dta_articles` | `dta_runs` |
+
+### 8) 注意事项
+
+- 面板默认只监听 `127.0.0.1`；服务器部署对外需自行加反向代理与鉴权；
+- 发布后端默认 `none`（仅标记已发布）；接真实接口在「审核发布-发布设置」填 URL/Headers/Defaults（JSON，参照本地 publish.yaml）；
+- 本地配置/密钥（`config/config.yaml`、`config/.env`、`data/`）均在 .gitignore，不会提交；
+- 清洗/归类的多集合名（逗号分隔）用于统计与参考原文解析；流水线写入按单集合处理，建议新流水线用独立库。
+
 
 ## 自定义接口
 
