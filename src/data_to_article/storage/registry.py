@@ -32,7 +32,7 @@ def get_storage(config: dict) -> StorageBackend:
         from data_to_article.storage.file import JsonFileBackend
 
         root = scfg.get("root") or os.environ.get("DTA_STORAGE_ROOT", "data")
-        return JsonFileBackend(root=root)
+        return JsonFileBackend(root=root, dirs=scfg.get("dirs") or {})
 
     if kind == "mongo":
         from data_to_article.storage.mongo import MongoBackend

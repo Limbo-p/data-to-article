@@ -17,7 +17,8 @@ def _now() -> str:
 
 
 class JsonFileBackend(StorageBackend):
-    def __init__(self, root: str | Path):
+    def __init__(self, root: str | Path, dirs: Optional[dict] = None):
+        """root 为根目录；dirs 可逐库覆盖（如 {"cleaned": "D:/data/mycleaned"}）。"""
         self.root = Path(root)
         self._dirs = {
             "raw": self.root / "raw",
@@ -28,6 +29,10 @@ class JsonFileBackend(StorageBackend):
             "runs": self.root / "runs",
             "publish": self.root / "publish",
         }
+        if dirs:
+            for kind, path in dirs.items():
+                if kind in self._dirs and path:
+                    self._dirs[kind] = Path(path)
         for d in self._dirs.values():
             d.mkdir(parents=True, exist_ok=True)
 

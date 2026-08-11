@@ -1,3 +1,3 @@
-{"title":"示例新闻一：某公司发布财报","content":"这是一段示例正文，用于演示 ingest 流程。","url":"https://example.com/a1","source":"demo","pub_time":"2026-08-01T09:00:00"}
-{"title":"示例新闻二：行业政策发布","content":"这是另一段示例正文，不含真实信息。","url":"https://example.com/a2","source":"demo","pub_time":"2026-08-01T10:00:00"}
-{"title":"示例新闻三：市场动态","content":"第三段示例正文，用于验证多文档导入。","url":"https://example.com/a3","source":"demo","pub_time":"2026-08-01T11:00:00"}
+{"title":"示例新闻一：某公司发布财报，营收利润双增长","content":"这是一段用于演示的示例正文。某公司今日发布财报，营收与净利润均实现两位数增长，超出市场预期，带动相关板块走强。","url":"https://example.com/a1","source":"demo","pub_time":"2026-08-10T09:00:00"}
+{"title":"示例新闻二：行业政策发布，多项措施支持发展","content":"这是另一段用于演示的示例正文。相关部门发布新政策，提出多项支持行业发展的措施，企业普遍表示将积极响应并落实。","url":"https://example.com/a2","source":"demo","pub_time":"2026-08-10T10:00:00"}
+{"title":"示例新闻三：市场动态，资金流向科技板块","content":"这是第三段用于演示的示例正文。今日市场交投活跃，资金明显流向科技板块，多只个股放量上涨，机构看好后续走势。","url":"https://example.com/a3","source":"demo","pub_time":"2026-08-11T09:00:00"}

@@ -299,6 +299,18 @@ pre{font-family:Consolas,monospace}
         </div>
       </div>
     </div>
+    <div id="file-dirs" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+      <div class="hint" style="margin-bottom:6px">本地库文件夹自定义（可分别指定各库路径；不填则用根目录下默认子文件夹，如 data/cleaned）：</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+        <label style="display:flex;flex-direction:column;gap:4px">清洗库 <input id="fd-cleaned" placeholder="(root)/cleaned"></label>
+        <label style="display:flex;flex-direction:column;gap:4px">归类库 <input id="fd-events" placeholder="(root)/events"></label>
+        <label style="display:flex;flex-direction:column;gap:4px">二创库 <input id="fd-articles" placeholder="(root)/articles"></label>
+        <label style="display:flex;flex-direction:column;gap:4px">原始 <input id="fd-raw" placeholder="(root)/raw"></label>
+        <label style="display:flex;flex-direction:column;gap:4px">运行记录 <input id="fd-runs" placeholder="(root)/runs"></label>
+        <label style="display:flex;flex-direction:column;gap:4px">查重 <input id="fd-fps" placeholder="(root)/dedup"></label>
+        <label style="display:flex;flex-direction:column;gap:4px">发布 <input id="fd-publish" placeholder="(root)/publish"></label>
+      </div>
+    </div>
     <div class="panel">
       <h2>② LLM（归类 + 二创）</h2>
       <div class="filters">
@@ -542,7 +554,7 @@ const ST_FIELDS={
   mongo:{fields:[['uri','连接串','mongodb://localhost:27017'],['database','数据库','data_to_article']]},
   mysql:{fields:[['host','主机','localhost'],['port','端口','3306'],['user','用户','root'],['password','密码',''],['database','数据库','data_to_article'],['table_prefix','表前缀','dta_']]}
 };
-function renderStorageFields(){const b=$('st-backend').value;$('st-fields').innerHTML=ST_FIELDS[b].fields.map(([k,label,ph])=>`<label>${label} <input id="st-${k}" placeholder="${ph}" value="${ph}"></label>`).join('');$('st-colls').style.display=(b==='mongo')?'block':'none';}
+function renderStorageFields(){const b=$('st-backend').value;$('st-fields').innerHTML=ST_FIELDS[b].fields.map(([k,label,ph])=>`<label>${label} <input id="st-${k}" placeholder="${ph}" value="${ph}"></label>`).join('');$('st-colls').style.display=(b==='mongo')?'block':'none';$('file-dirs').style.display=(b==='file')?'block':'none';}
 async function testStorage(){
   const b=$('st-backend').value;const body={backend:b};
   ST_FIELDS[b].fields.forEach(([k])=>{const v=$('st-'+k)?.value;if(v!==undefined)body[k]=v;});
@@ -568,6 +580,15 @@ async function loadSetup(){
     renderStorageFields();renderLlmFields();
     if(st.backend==='mongo'&&st.uri)$('st-uri').value=st.uri;
     if(st.backend==='mongo'&&st.database)$('st-database').value=st.database;
+    if(st.backend==='file'){const dd=st.dirs||{};
+      $('fd-cleaned').value=dd.cleaned||'';
+      $('fd-events').value=dd.events||'';
+      $('fd-articles').value=dd.articles||'';
+      $('fd-raw').value=dd.raw||'';
+      $('fd-runs').value=dd.runs||'';
+      $('fd-fps').value=dd.dedup||'';
+      $('fd-publish').value=dd.publish||'';
+    }
     if(st.backend==='mongo'){const cl=st.collections||{};
       ['cleaned','events','article'].forEach(k=>{});
       $('coll-cleaned').value=cl.cleaned||'articles';
@@ -588,6 +609,10 @@ async function saveSetup(){
   try{
     const b=$('st-backend').value;const storage={backend:b};
     ST_FIELDS[b].fields.forEach(([k])=>{const v=$('st-'+k)?.value;if(v!==undefined)storage[k]=v;});
+    if(b==='file'){storage.dirs={
+      cleaned:$('fd-cleaned').value.trim(),events:$('fd-events').value.trim(),
+      articles:$('fd-articles').value.trim(),raw:$('fd-raw').value.trim(),
+      runs:$('fd-runs').value.trim(),dedup:$('fd-fps').value.trim(),publish:$('fd-publish').value.trim()};}
     if(b==='mongo'){storage.collections={
       cleaned:$('coll-cleaned').value.trim(),events:$('coll-events').value.trim(),
       event_articles:$('coll-articles').value.trim(),raw:$('coll-raw').value.trim(),

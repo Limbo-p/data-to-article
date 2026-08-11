@@ -13,13 +13,18 @@
 ## 快速开始（无需 MongoDB、无需 API Key）
 
 ```bash
-# 零依赖模式：file 存储 + mock LLM
+# 1) 安装（本项目未发布到 PyPI，请本地安装）
+pip install -e .                 # 需要 MySQL 支持：pip install -e ".[mysql]"
+
+# 2) 零依赖模式：file 存储 + mock LLM（先验证流程结构）
 python -m data_to_article.cli ingest --file examples/sample_articles.jsonl
 python -m data_to_article.cli run --dry-run
-# 或安装为命令后
+# 或安装后使用 dta 命令
 dta ingest --file examples/sample_articles.jsonl
-dta run --hours 24
+dta run --hours 720 --limit 50    # 示例数据日期固定为 2026-08，用大窗口兜底
 ```
+
+> 注意：`mock` LLM 只用于验证流程结构（dry-run / 跑通），**不会产出真实事件与二创**。要真实产出，请在 config 配真实 LLM（如 `llm.provider: openai_compat` + 环境变量 `DEEPSEEK_API_KEY`），并用真实数据（如 `dta ingest --format mongo --source 你的集合`）。
 
 ## 命令
 
@@ -51,7 +56,7 @@ dta run --hours 24
 
 ```bash
 # 1) 装依赖
-pip install "data-to-article[mysql]"
+pip install -e ".[mysql]"
 
 # 2) 建表（可选：MySqlBackend 首次连接也会自动建库建表）
 mysql -u root -p < schema.sql

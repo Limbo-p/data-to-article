@@ -157,6 +157,10 @@ def _save_setup(body: dict) -> dict:
         cfg.setdefault("storage", {})["backend"] = backend
         if backend == "file":
             cfg["storage"]["root"] = st.get("root") or "data"
+            if st.get("dirs"):
+                cfg["storage"]["dirs"] = {
+                    str(k): str(v) for k, v in st["dirs"].items() if v
+                }
         elif backend == "mongo":
             cfg["storage"]["uri"] = st.get("uri", "")
             cfg["storage"]["database"] = st.get("database", "data_to_article")
@@ -222,7 +226,8 @@ def _storage_conn(cfg: dict) -> dict:
         }
     if backend == "mysql":
         return st.get("mysql") or {}
-    return {"root": st.get("root") or os.environ.get("DTA_STORAGE_ROOT", "data")}
+    return {"root": st.get("root") or os.environ.get("DTA_STORAGE_ROOT", "data"),
+            "dirs": st.get("dirs") or {}}
 
 
 def _stats() -> dict:
@@ -233,8 +238,9 @@ def _stats() -> dict:
     try:
         if backend == "file":
             root = Path(conn.get("root", "data"))
+            dirs = conn.get("dirs") or {}
             for name in ("raw", "cleaned", "events", "articles", "runs"):
-                d = root / name
+                d = Path(dirs[name]) if dirs.get(name) else root / name
                 counts[name] = len(list(d.glob("*.json"))) if d.exists() else 0
         elif backend == "mongo":
             from pymongo import MongoClient
@@ -274,7 +280,8 @@ def _recent_runs(limit: int = 20) -> list:
     out = []
     try:
         if backend == "file":
-            runs_dir = Path(conn.get("root", "data")) / "runs"
+            dirs = conn.get("dirs") or {}
+            runs_dir = Path(dirs["runs"]) if dirs.get("runs") else Path(conn.get("root", "data")) / "runs"
             if runs_dir.exists():
                 for p in sorted(runs_dir.glob("*.json"), reverse=True)[:limit]:
                     try:
@@ -325,6 +332,10 @@ def _event_detail(event_id: str) -> dict:
 def _list_events(q: str = "", page: int = 1, limit: int = 20) -> dict:
     st = _get_storage()
     items = st.query_events(keyword=q, limit=0)
+    if q.strip().startswith("evt_"):
+        ev = st.get_event(q.strip())
+        if ev and not any(e.get("event_id") == q.strip() for e in items):
+            items.insert(0, ev)
     total = len(items)
     start = max(0, (page - 1) * limit)
     page_items = items[start:start + limit]
@@ -339,8 +350,12 @@ def _list_events(q: str = "", page: int = 1, limit: int = 20) -> dict:
 
 def _search(q: str) -> dict:
     st = _get_storage()
-    return {"ok": True,
-            "events": st.query_events(keyword=q, limit=20),
+    events = st.query_events(keyword=q, limit=20)
+    if q.strip().startswith("evt_"):
+        ev = st.get_event(q.strip())
+        if ev and not any(e.get("event_id") == q.strip() for e in events):
+            events.insert(0, ev)
+    return {"ok": True, "events": events,
             "articles": st.search_articles(keyword=q, limit=20)}
 
 
@@ -406,7 +421,7 @@ def _resolve_content(fp: str) -> dict:
     try:
         if backend == "file":
             from data_to_article.storage.file import JsonFileBackend
-            st = JsonFileBackend(root=conn.get("root", "data"))
+            st = JsonFileBackend(root=conn.get("root", "data"), dirs=conn.get("dirs") or {})
             a = st.get_cleaned_by_fp(fp)
             return {"ok": True, "article": a} if a else {"ok": False, "error": "not found"}
         if backend == "mongo":
