@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 from data_to_article.event.classify import ClassifyEngine
@@ -10,19 +11,40 @@ from data_to_article.event.llm_classifier import LLMClassifier
 from data_to_article.generate.generator import GenerateEngine
 from data_to_article.ingest import get_ingest
 from data_to_article.llm import create_llm_client
-from data_to_article.settings import load_config
+from data_to_article.settings import PROJECT_ROOT, load_config
 from data_to_article.storage import get_storage
 from data_to_article.washing.run import run_wash
 
 
+FORMAT_BACKEND = {
+    "jsonl": "file",
+    "csv": "file",
+    "mongo": "mongo",
+    "mysql": "mysql",
+}
+
+
+def _persist_storage_backend(backend: str) -> None:
+    """把输入来源推导出的存储后端写入标记文件，供后续 wash/classify/generate 一致使用。"""
+    try:
+        marker = PROJECT_ROOT / "data" / ".storage.json"
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(json.dumps({"backend": backend}, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
+
 def _cmd_ingest(args) -> int:
     config = load_config(args.config)
+    # 自动配对：输入来源决定存储后端，三个库（清洗/归类/二创）保持一致
+    backend = FORMAT_BACKEND.get(args.format, "file")
+    config.setdefault("storage", {})["backend"] = backend
+    _persist_storage_backend(backend)
     source = get_ingest(config, args.format, path=args.file, collection=args.source, limit=args.limit)
     docs = source.read_normalized(limit=args.limit)
     storage = get_storage(config)
     n = storage.save_raw_articles(docs)
-    backend = config.get("storage", {}).get("backend", "?")
-    print(f"ingest: 导入 {n} 条原始文章 -> storage={backend}")
+    print(f"ingest: 导入 {n} 条原始文章 -> storage={backend}（清洗/归类/二创三库一致）")
     return 0
 
 

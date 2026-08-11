@@ -31,6 +31,54 @@ dta run --hours 24
 | `dta generate --hours 168` | 二创：事件 -> 多视角文章 |
 | `dta run --only wash,classify,generate` | 一键全链路 |
 
+## 存储自动配对（输入决定后端）
+
+`dta ingest` 的输入来源会自动决定存储后端，三个库（清洗库 / 归类库 / 二创库）保持一致：
+
+| 输入来源 | 存储后端 | 三库落点 |
+|---|---|---|
+| `--format jsonl / csv` | `file` | `data/cleaned/` `data/events/` `data/articles/` |
+| `--format mongo` | `mongo` | 集合 `articles` `events` `event_articles` |
+| `--format mysql` | `mysql` | 表 `articles` `events` `event_articles` |
+
+- ingest 时会把推导出的后端写入 `data/.storage.json`，后续 `wash / classify / generate / run` 自动读取，三个库天然一致；
+- 优先级：环境变量 `DTA_STORAGE` > `data/.storage.json`（自动标记） > config 的 `storage.backend` > 默认 `mongo`；
+- 手动切换：设 `DTA_STORAGE=file|mongo` 即可覆盖；或重新 `dta ingest` 换输入来源。
+
+## MySQL 存储
+
+存储后端也可选 MySQL（输入 mysql 时三库一致，落 MySQL 表）：
+
+```bash
+# 1) 装依赖
+pip install "data-to-article[mysql]"
+
+# 2) 建表（可选：MySqlBackend 首次连接也会自动建库建表）
+mysql -u root -p < schema.sql
+
+# 3) 配置（config/config.yaml）
+#   storage:
+#     backend: mysql
+#     mysql: { host: localhost, port: 3306, user: root, password: "", database: data_to_article, table_prefix: dta_ }
+#   或环境变量 MYSQL_HOST / MYSQL_PORT / MYSQL_USER / MYSQL_PASSWORD / MYSQL_DB
+
+# 4) 使用
+dta ingest --format mysql --source articles
+dta run
+```
+
+表清单（前缀默认 `dta_`，见 `schema.sql`）：
+
+| 库 | 表 |
+|---|---|
+| 原始数据 | `dta_raw` |
+| 清洗库 | `dta_cleaned` |
+| 归类库 | `dta_events` + `dta_dedup`（查重指纹） |
+| 二创库 | `dta_articles` |
+| 运行记录 | `dta_runs` |
+
+> 注意：MySQL 文档以 JSON 列存储（要求 MySQL 5.7+）；切换存储后端不会自动迁移数据。
+
 ## 自定义接口
 
 - **自定义存储**：`config` 里 `storage.backend: my_backend` + `storage.module: mypkg.MyBackend`（继承 `StorageBackend`）。

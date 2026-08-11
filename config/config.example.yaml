@@ -11,6 +11,14 @@
       "event_articles": "event_articles",
       "runs": "pipeline_runs",
       "fps": "content_fps"
+    },
+    "mysql": {
+      "host": "localhost",
+      "port": 3306,
+      "user": "root",
+      "password": "",
+      "database": "data_to_article",
+      "table_prefix": "dta_"
     }
   },
   "mysql": {
