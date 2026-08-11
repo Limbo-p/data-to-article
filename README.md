@@ -79,6 +79,27 @@ dta run
 
 > 注意：MySQL 文档以 JSON 列存储（要求 MySQL 5.7+）；切换存储后端不会自动迁移数据。
 
+## 总控面板（dta serve）
+
+浏览器控制台：**初始化（选存储 / LLM / Key / 调度）→ 流水线运行 → 实时日志 → 运行历史**。
+
+```bash
+# 方式一：启动脚本（自动装依赖并起服务）
+./scripts/start_panel.sh          # Linux / macOS
+.\scripts\start_panel.ps1        # Windows
+
+# 方式二：直接命令
+dta serve --host 127.0.0.1 --port 8765
+
+# 打开 http://127.0.0.1:8765
+# 首次使用：到「设置」完成初始化（存储后端 / LLM API Key / 调度时间）→ 保存
+# 然后到「流水线」运行 清洗 → 归类 → 二创
+```
+
+- 设置保存在 `config/config.yaml` + `config/.env`（密钥已 gitignore）；
+- 面板执行 = 调用 `dta run`，与命令行完全一致；
+- 面板默认只监听本机 `127.0.0.1`，服务器部署请自行加反向代理与鉴权。
+
 ## 自定义接口
 
 - **自定义存储**：`config` 里 `storage.backend: my_backend` + `storage.module: mypkg.MyBackend`（继承 `StorageBackend`）。

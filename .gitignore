@@ -36,3 +36,6 @@ logs/
 *.log
 *.pid
 *.port
+
+# ---- 面板生成的本地配置 ----
+config/config.yaml

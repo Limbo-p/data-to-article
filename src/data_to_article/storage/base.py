@@ -79,6 +79,33 @@ class StorageBackend(abc.ABC):
     def articles_exist(self, event_id: str) -> bool:
         """事件是否已生成过二创文章。"""
 
+    # ---- 二创产物：读回 / 审核 / 回滚 / 搜索 ----
+    @abc.abstractmethod
+    def get_event_articles(self, event_id: str) -> Optional[dict]:
+        """读取某事件当前二创文档（含 articles 与 versions）。"""
+
+    @abc.abstractmethod
+    def set_article_review(self, event_id: str, article_idx: int,
+                           status: str, note: str = "") -> bool:
+        """更新某事件第 article_idx 篇二创文章的审核状态。"""
+
+    @abc.abstractmethod
+    def rollback_articles(self, event_id: str, version: int) -> bool:
+        """回滚二创文章到指定版本。"""
+
+    @abc.abstractmethod
+    def search_articles(self, keyword: str = "", limit: int = 0) -> list[dict]:
+        """搜索二创文章（标题/正文模糊匹配），返回带 event_id 与 _idx 的文章列表。"""
+
+    # ---- 发布记录 ----
+    @abc.abstractmethod
+    def record_publish(self, log: dict) -> None:
+        """记录一次发布操作。"""
+
+    @abc.abstractmethod
+    def list_publish_logs(self, limit: int = 20) -> list[dict]:
+        """读取最近发布记录。"""
+
     # ---- 运行记录 ----
     @abc.abstractmethod
     def record_run(self, stage: str, status: str, params: dict, log_tail: str = "") -> None:

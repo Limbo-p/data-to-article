@@ -26,6 +26,7 @@ class MongoBackend(StorageBackend):
         self.c_articles = self.db[c.get("event_articles", "event_articles")]
         self.c_runs = self.db[c.get("runs", "pipeline_runs")]
         self.c_fps = self.db[c.get("fps", "content_fps")]
+        self.c_publish = self.db[c.get("publish", "publish_logs")]
 
     @staticmethod
     def _now() -> str:
@@ -162,6 +163,64 @@ class MongoBackend(StorageBackend):
 
     def articles_exist(self, event_id: str) -> bool:
         return self.c_articles.find_one({"event_id": event_id}, {"_id": 1}) is not None
+
+    # ---- articles: 读回 / 审核 / 回滚 / 搜索 ----
+    def get_event_articles(self, event_id: str) -> Optional[dict]:
+        return self.c_articles.find_one({"event_id": event_id})
+
+    def set_article_review(self, event_id: str, article_idx: int,
+                           status: str, note: str = "") -> bool:
+        doc = self.c_articles.find_one({"event_id": event_id})
+        if not doc or not doc.get("articles") or article_idx >= len(doc["articles"]):
+            return False
+        arts = list(doc["articles"])
+        art = dict(arts[article_idx])
+        art["review_status"] = status
+        art["reviewed_at"] = self._now()
+        if note:
+            art["review_note"] = note
+        arts[article_idx] = art
+        self.c_articles.update_one({"event_id": event_id}, {"$set": {"articles": arts}})
+        return True
+
+    def rollback_articles(self, event_id: str, version: int) -> bool:
+        doc = self.c_articles.find_one({"event_id": event_id})
+        if not doc:
+            return False
+        for v in doc.get("versions") or []:
+            if int(v.get("version")) == int(version):
+                self.c_articles.update_one(
+                    {"event_id": event_id},
+                    {"$set": {"articles": v.get("articles", []),
+                              "ai_generated_at": v.get("archived_at", self._now())}},
+                )
+                return True
+        return False
+
+    def search_articles(self, keyword: str = "", limit: int = 0) -> list[dict]:
+        import re as _re
+        rx = _re.compile(_re.escape(keyword), _re.I) if keyword else None
+        out = []
+        for doc in self.c_articles.find():
+            for idx, art in enumerate(doc.get("articles") or []):
+                hay = " ".join([str(art.get("title", "")), str(art.get("content", ""))])
+                if rx is not None and not rx.search(hay):
+                    continue
+                item = dict(art)
+                item["event_id"] = doc.get("event_id")
+                item["_idx"] = idx
+                out.append(item)
+                if limit and len(out) >= limit:
+                    return out
+        return out
+
+    # ---- publish ----
+    def record_publish(self, log: dict) -> None:
+        self.c_publish.insert_one(dict(log))
+
+    def list_publish_logs(self, limit: int = 20) -> list[dict]:
+        return list(self.c_publish.find({}, {"_id": 0})
+                    .sort("published_at", -1).limit(limit))
 
     # ---- runs ----
     def record_run(self, stage: str, status: str, params: dict, log_tail: str = "") -> None:

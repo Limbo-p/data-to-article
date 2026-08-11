@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>data-to-article 总控面板</title>
+<style>
+
+:root{
+  --bg:#f3f5f7; --panel:#ffffff; --border:#dde3e9; --text:#1f2937; --muted:#64748b;
+  --accent:#2563eb; --accent-weak:#eff4ff; --green:#15803d; --green-weak:#ecfdf3;
+  --amber:#b45309; --amber-weak:#fffbeb; --red:#b91c1c; --red-weak:#fef2f2;
+  --gray:#6b7280; --gray-weak:#f1f5f9; --radius:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.55 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--text)}
+.ic{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--panel);color:var(--text);padding:6px 12px;border-radius:var(--radius);transition:background .12s,border-color .12s}
+.btn:hover{border-color:#b9c2cc;background:#f8fafc;text-decoration:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#1d4ed8}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.danger{color:var(--red);border-color:#f3c1c1}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+header{position:fixed;top:0;left:0;right:0;height:54px;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;gap:18px;padding:0 20px;z-index:50;box-shadow:0 1px 0 rgba(0,0,0,.15)}
+.brand{font-weight:700;font-size:15px;letter-spacing:0;white-space:nowrap}
+.brand small{display:block;font-weight:400;font-size:11px;color:#94a3b8;letter-spacing:0}
+nav{display:flex;gap:4px;flex:1;overflow-x:auto}
+nav button{background:transparent;border:0;color:#cbd5e1;padding:8px 14px;border-radius:6px;white-space:nowrap}
+nav button:hover{background:#1e293b;color:#fff}
+nav button.active{background:#2563eb;color:#fff}
+.header-right{display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:#64748b;margin-right:5px}
+.dot.ok{background:#22c55e}.dot.bad{background:#ef4444}
+main{max-width:1440px;margin:0 auto;padding:74px 24px 60px}
+.view{display:none}
+.view.active{display:block}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.page-head h1{font-size:20px;font-weight:700;letter-spacing:0}
+.page-head p{color:var(--muted);font-size:13px;margin-top:3px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.panel h2{font-size:14px;font-weight:700;margin-bottom:10px;letter-spacing:0}
+.panel h2 .hint{font-weight:400;color:var(--muted);font-size:12px;margin-left:8px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.stat .num{font-size:26px;font-weight:700;letter-spacing:0}
+.stat .lbl{color:var(--muted);font-size:12px;margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{color:var(--muted);font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid #edf1f4;vertical-align:top}
+tr:last-child td{border-bottom:0}
+tr.row-click{cursor:pointer}
+tr.row-click:hover td{background:#f8fafc}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;line-height:1.5;white-space:nowrap}
+.badge.cat{background:var(--accent-weak);color:var(--accent)}
+.badge.ok{background:var(--green-weak);color:var(--green)}
+.badge.no{background:var(--gray-weak);color:var(--gray)}
+.badge.amber{background:var(--amber-weak);color:var(--amber)}
+.badge.red{background:var(--red-weak);color:var(--red)}
+.nav-badge{display:inline-block;min-width:16px;height:16px;line-height:16px;padding:0 5px;margin-left:6px;border-radius:8px;background:var(--red);color:#fff;font-size:11px;font-weight:700;text-align:center;vertical-align:top}
+.rv-tab.active{background:#2563eb;color:#fff}
+
+.mono{font-family:Consolas,"Courier New",monospace;font-size:12px;color:var(--muted);word-break:break-all}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.filters input[type=text],.filters select{height:34px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:#fff}
+.filters input[type=text]{min-width:260px}
+.pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px;font-size:13px;color:var(--muted)}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:var(--radius);background:#fbfcfd}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--gray-weak);border:1px solid var(--border);color:#475569;border-radius:999px;padding:2px 10px;font-size:12px}
+.chip.link{background:var(--accent-weak);color:var(--accent);border-color:#c7d7fe;cursor:pointer}
+.chip.link:hover{background:#dbe7ff;text-decoration:none}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:980px){.grid-2{grid-template-columns:1fr}}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:#fff}
+.field input,.field select{height:34px}
+.field textarea{min-height:200px;font:inherit;line-height:1.7;resize:vertical}
+.check{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#475569}
+.log-box{background:#0f172a;color:#cbd5e1;font:12px/1.6 Consolas,"Courier New",monospace;padding:12px;border-radius:var(--radius);max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.log-box .tail{color:#94a3b8}
+.task-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #edf1f4;font-size:13px;flex-wrap:wrap}
+.task-row .meta{color:var(--muted);font-size:12px}
+.status-tag{font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.status-tag.ready{background:var(--gray-weak);color:var(--gray)}
+.status-tag.running{background:var(--amber-weak);color:var(--amber);display:inline-flex;align-items:center;gap:5px}
+.status-tag.running::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--amber);animation:ctrl-pulse 1.2s ease-in-out infinite}
+.status-tag.done{background:var(--green-weak);color:var(--green)}
+.status-tag.failed{background:var(--red-weak);color:var(--red)}
+.status-tag.stopped{background:#eef2f7;color:#475569;border:1px solid #cbd5e1}
+@keyframes ctrl-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+.ctrl-card{transition:border-color .2s,box-shadow .2s}
+.ctrl-card.running{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber),0 4px 14px rgba(180,83,9,.10)}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(720px,100%);background:var(--panel);box-shadow:-8px 0 24px rgba(15,23,42,.18);z-index:60;transform:translateX(105%);transition:transform .18s ease;overflow-y:auto}
+#drawer.open{transform:translateX(0)}
+.drawer-head{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;z-index:2}
+.drawer-head h2{font-size:16px;line-height:1.4;letter-spacing:0}
+.drawer-body{padding:18px 20px 40px}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;font-size:13px;margin:10px 0}
+.kv dt{color:var(--muted)}
+.overview-text{font-size:14px;line-height:1.9;color:#334155;background:#f8fafc;border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin:10px 0}
+#modal{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:70;display:none;align-items:flex-start;justify-content:center;padding:40px 16px}
+#modal.open{display:flex}
+#pub-modal{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:75;display:none;align-items:flex-start;justify-content:center;padding:40px 16px}
+#pub-modal.open{display:flex}
+#pub-modal .modal-box{max-width:900px}
+.modal-box{background:#fff;border-radius:8px;max-width:980px;width:100%;max-height:calc(100vh - 80px);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(15,23,42,.3)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.modal-head h3{font-size:14px}
+.modal-body{padding:14px 16px;overflow:auto}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:9px 18px;border-radius:6px;font-size:13px;z-index:90;opacity:0;pointer-events:none;transition:opacity .15s}
+#toast.show{opacity:1}
+.kbd{display:inline-block;border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:0 6px;font-size:11px;background:#fff;color:var(--muted)}
+
+/* ---- data-to-article 面板补充样式 ---- */
+.empty{color:var(--muted);padding:14px;font-size:13px;text-align:center}
+.art-card{border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px}
+.art-card .t{font-weight:600;margin-bottom:4px}
+pre{font-family:Consolas,monospace}
+.status-tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;line-height:1.5;white-space:nowrap}
+.status-tag.running,.status-tag.amber{background:var(--amber-weak);color:var(--amber)}
+.status-tag.done,.status-tag.ok{background:var(--green-weak);color:var(--green)}
+.status-tag.failed,.status-tag.red{background:var(--red-weak);color:var(--red)}
+.status-tag.stopped{background:var(--gray-weak);color:var(--gray)}
+.status-tag.dry_run{background:var(--accent-weak);color:var(--accent)}
+
+.reader-layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px;align-items:start}
+.reader-side{position:sticky;top:70px;display:flex;flex-direction:column;gap:12px}
+.reader-search{display:flex;gap:8px}
+.reader-search input{flex:1;height:36px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:#fff}
+.result-group{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:10px;max-height:480px;overflow-y:auto}
+.result-group h3{font-size:12px;color:var(--muted);font-weight:600;padding:4px 6px 8px;border-bottom:1px solid #edf1f4;margin-bottom:6px}
+.result-item{padding:9px 10px;border-bottom:1px solid #f1f4f7;cursor:pointer;border-radius:4px}
+.result-item:last-child{border-bottom:0}
+.result-item:hover{background:var(--accent-weak)}
+.result-item .t{font-size:13px;font-weight:600;line-height:1.45;color:var(--text)}
+.result-item .m{font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.reader-pane{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:34px 44px;max-width:900px;min-height:420px}
+.reader-kicker{font-size:12px;color:var(--muted);margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.reader-title{font-size:24px;font-weight:700;line-height:1.5;letter-spacing:0;margin-bottom:14px}
+.reader-meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;color:var(--muted);padding-bottom:14px;border-bottom:1px solid #edf1f4;margin-bottom:18px}
+.reader-content{font-family:Georgia,"Noto Serif SC","Source Han Serif SC","Songti SC",serif;font-size:16.5px;line-height:2.05;color:#2b3440;white-space:pre-wrap;word-break:break-word}
+.reader-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:22px;padding-top:16px;border-top:1px solid #edf1f4}
+.reader-empty{color:var(--muted);text-align:center;padding:60px 20px;font-size:14px}
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
+  <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/><rect x="9" y="9" width="6" height="6"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14L21 3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+</svg>
+
+<header>
+  <div class="brand">data-to-article 总控面板<small>清洗 · 归类 · 二创 · 阅读审稿</small></div>
+  <nav id="nav">
+    <button data-tab="overview" class="active">概览</button>
+    <button data-tab="pipeline">流水线</button>
+    <button data-tab="events">事件库</button>
+    <button data-tab="review">审核发布<span class="nav-badge" id="review-badge" style="display:none"></span></button>
+    <button data-tab="reader">搜索阅读</button>
+    <button data-tab="system">系统</button>
+  </nav>
+  <div class="header-right"><span class="dot" id="backend-dot"></span><span id="backend-name">--</span></div>
+</header>
+
+<main>
+  <!-- 概览 -->
+  <section id="view-overview" class="view active">
+    <div class="page-head"><div><h1>概览</h1><p>事件库与二创产出总览</p></div>
+      <button class="btn" onclick="loadStatus()"><svg class="ic"><use href="#i-refresh"/></svg>刷新</button></div>
+    <div id="ov-wizard" class="panel" style="display:none;background:#eef6ff;border-color:#bcd9ff"></div>
+    <div class="stat-grid" id="ov-stats"></div>
+    <div class="panel"><h2>最近更新事件</h2><div id="ov-events"></div></div>
+    <div class="panel"><h2>最近运行</h2><div id="ov-runs"></div></div>
+  </section>
+
+  <!-- 流水线 -->
+  <section id="view-pipeline" class="view">
+    <div class="page-head"><div><h1>流水线</h1><p>清洗 → 事件归类 → 二创生成</p></div></div>
+    <div class="panel">
+      <div class="filters">
+        <select id="pipe-only">
+          <option value="wash,classify,generate">全链（清洗+归类+二创）</option>
+          <option value="wash,classify">清洗+归类</option>
+          <option value="wash">只清洗</option><option value="classify">只归类</option><option value="generate">只二创</option>
+        </select>
+        <input type="number" id="pipe-hours" value="0" min="0" placeholder="hours(0=默认)" style="width:120px;height:34px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius)">
+        <input type="number" id="pipe-limit" value="0" min="0" placeholder="limit(0=默认)" style="width:120px;height:34px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius)">
+        <button class="btn primary" onclick="pipeRun(false)"><svg class="ic"><use href="#i-play"/></svg>运行</button>
+        <button class="btn" onclick="pipeRun(true)">试运行(dry-run)</button>
+        <button class="btn danger" onclick="pipeStop()"><svg class="ic"><use href="#i-stop"/></svg>停止</button>
+        <span class="hint" id="pipe-status"></span>
+      </div>
+    </div>
+    <div class="panel"><h2>实时日志</h2><pre id="pipe-log" style="background:#0f172a;color:#cbd5e1;padding:12px;border-radius:6px;font-size:12px;line-height:1.6;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all">（运行/试运行后这里显示实时日志）</pre></div>
+    <div class="panel"><h2>运行历史</h2><div id="pipe-runs"></div></div>
+  </section>
+
+  <!-- 事件库 -->
+  <section id="view-events" class="view">
+    <div class="page-head"><div><h1>事件库</h1><p>搜索、浏览、生成二创</p></div></div>
+    <div class="panel">
+      <div class="filters">
+        <input type="text" id="ev-q" placeholder="搜索事件标题/关键词" onkeydown="if(event.key==='Enter')loadEvents(1)">
+        <button class="btn primary" onclick="loadEvents(1)"><svg class="ic"><use href="#i-search"/></svg>搜索</button>
+        <span class="hint" id="ev-total"></span>
+      </div>
+    </div>
+    <div class="panel"><div id="ev-list"></div></div>
+  </section>
+
+  <!-- 审核发布 -->
+  <section id="view-review" class="view">
+    <div class="page-head"><div><h1>审核发布</h1><p>待审 → 通过 → 发布 → 记录</p></div></div>
+    <div class="filters">
+      <button class="btn sm rv-tab active" data-rv="pending" onclick="rvTab('pending')">① 待审核</button>
+      <button class="btn sm rv-tab" data-rv="publish" onclick="rvTab('publish')">② 待发布</button>
+      <button class="btn sm rv-tab" data-rv="logs" onclick="rvTab('logs')">③ 发布记录</button>
+      <button class="btn sm rv-tab" data-rv="settings" onclick="rvTab('settings')">④ 发布设置</button>
+    </div>
+    <div id="rv-pending" class="panel"><h2>待审核文章</h2><div id="rv-list"></div></div>
+    <div id="rv-publish" class="panel" style="display:none">
+      <h2>待发布（已通过）</h2>
+      <div class="filters">
+        <button class="btn" onclick="publishAll(true)">全部发布（预览 dry-run）</button>
+        <button class="btn primary" onclick="publishAll(false)">全部发布</button>
+        <span class="hint">发布后端：<span id="pub-backend"></span></span>
+      </div>
+      <div id="rv-pub-list"></div>
+    </div>
+    <div id="rv-logs" class="panel" style="display:none"><h2>发布记录</h2><div id="rv-log-list"></div></div>
+    <div id="rv-settings" class="panel" style="display:none">
+      <h2>发布设置 <span class="hint">自定义格式，参照本地 publish.yaml</span></h2>
+      <div class="filters"><label style="display:flex;flex-direction:column;gap:4px">后端
+        <select id="pub-backend-sel"><option value="none">none（仅标记已发布）</option><option value="http">http（自定义接口）</option></select></label></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <label style="display:flex;flex-direction:column;gap:4px">URL <input type="text" id="pub-url" placeholder="http://.../mp/column/add"></label>
+        <label style="display:flex;flex-direction:column;gap:4px">Method <input type="text" id="pub-method" value="POST"></label>
+        <label style="display:flex;flex-direction:column;gap:4px">Headers（JSON）<textarea id="pub-headers" rows="6" style="font-family:Consolas,monospace;font-size:12px"></textarea></label>
+        <label style="display:flex;flex-direction:column;gap:4px">Defaults（JSON）<textarea id="pub-defaults" rows="6" style="font-family:Consolas,monospace;font-size:12px"></textarea></label>
+      </div>
+      <div class="filters"><button class="btn primary" onclick="savePublishConfig()">保存发布设置</button><span class="hint" id="pub-msg"></span></div>
+    </div>
+  </section>
+
+  <!-- 搜索阅读 -->
+  <section id="view-reader" class="view">
+    <div class="page-head"><div><h1>搜索阅读</h1><p>搜索事件与二创稿件，点击结果进入阅读器</p></div></div>
+    <div class="reader-layout">
+      <div class="reader-side">
+        <div class="reader-search"><input type="text" id="rd-q" placeholder="搜索事件或二创文章" onkeydown="if(event.key==='Enter')doSearch()"><button class="btn primary" onclick="doSearch()"><svg class="ic"><use href="#i-search"/></svg>搜索</button></div>
+        <div class="result-group"><h3>事件结果</h3><div id="rd-events"></div></div>
+        <div class="result-group"><h3>二创文章结果</h3><div id="rd-articles"></div></div>
+      </div>
+      <div class="reader-pane" id="reader-pane"><div class="reader-empty">在左侧搜索事件或二创文章，点击结果进入阅读</div></div>
+    </div>
+  </section>
+
+  <!-- 系统 -->
+  <section id="view-system" class="view">
+    <div class="page-head"><div><h1>系统</h1><p>存储 / LLM / 调度 初始化</p></div></div>
+    <div class="panel">
+      <h2>① 存储后端</h2>
+      <div class="filters">
+        <select id="st-backend"><option value="file">本地文件（零依赖）</option><option value="mongo">MongoDB</option><option value="mysql">MySQL</option></select>
+        <button class="btn" onclick="testStorage()">测试连接</button><span class="hint" id="st-msg"></span>
+      </div>
+      <div id="st-fields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:6px"></div>
+      <div id="st-colls" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+        <div class="hint" style="margin-bottom:6px">Mongo 集合名自定义（多个用逗号分隔，兼容旧库）：</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+          <label style="display:flex;flex-direction:column;gap:4px">清洗库 <input id="coll-cleaned" placeholder="articles"></label>
+          <label style="display:flex;flex-direction:column;gap:4px">归类库 <input id="coll-events" placeholder="events"></label>
+          <label style="display:flex;flex-direction:column;gap:4px">二创库 <input id="coll-articles" placeholder="event_articles"></label>
+          <label style="display:flex;flex-direction:column;gap:4px">原始 <input id="coll-raw" placeholder="raw_articles"></label>
+          <label style="display:flex;flex-direction:column;gap:4px">运行记录 <input id="coll-runs" placeholder="pipeline_runs"></label>
+          <label style="display:flex;flex-direction:column;gap:4px">查重 <input id="coll-fps" placeholder="content_fps"></label>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>② LLM（归类 + 二创）</h2>
+      <div class="filters">
+        <select id="llm-provider"><option value="openai_compat">OpenAI 兼容（DeepSeek）</option><option value="anthropic">Anthropic</option><option value="gemini">Gemini</option><option value="mock">Mock（零依赖）</option></select>
+        <button class="btn" onclick="testLlm()">验证</button><span class="hint" id="llm-msg"></span>
+      </div>
+      <div id="llm-fields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:6px"></div>
+    </div>
+    <div class="panel">
+      <h2>③ 调度（可选）</h2>
+      <div class="filters">
+        <label style="display:flex;flex-direction:column;gap:4px">清洗+归类时间 <input type="time" id="sch-wc" value="10:00"></label>
+        <label style="display:flex;flex-direction:column;gap:4px">二创时间 <input type="time" id="sch-gen" value="14:00"></label>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sch-catch" checked> 错过补跑</label>
+      </div>
+    </div>
+    <div class="panel"><button class="btn primary" onclick="saveSetup()">保存设置</button><span class="hint" id="save-msg"></span></div>
+  </section>
+</main>
+
+<div id="drawer"><div class="drawer-head"><div><h2 id="drawer-title"></h2></div><button class="btn ghost" onclick="closeDrawer()"><svg class="ic"><use href="#i-x"/></svg>关闭</button></div><div class="drawer-body" id="drawer-body"></div></div>
+
+<div id="modal"><div class="modal-box">
+  <div class="modal-head"><h3 id="modal-title">任务日志</h3><button class="btn ghost" onclick="closeModal()"><svg class="ic"><use href="#i-x"/></svg></button></div>
+  <div class="modal-body" id="modal-body" style="white-space:pre-wrap;word-break:break-all"></div>
+</div></div>
+
+<div id="toast"></div>
+
+<script>
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=t=>t?String(t).replace('T',' ').slice(0,19):'';
+const shortId=id=>id&&id.length>18?id.slice(0,8)+'…'+id.slice(-6):id;
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._h);toast._h=setTimeout(()=>t.classList.remove('show'),2800);}
+const READ_CACHE={};
+function readBtn(a){const k=(a.event_id||'e')+'_'+(a._idx??0);READ_CACHE[k]={title:a.title||'',content:a.content||''};return `<button class="btn sm" onclick="readArticle('${k}')">阅读</button>`;}
+async function j(url,opt){const r=await fetch(url,opt||{});let d={};try{d=await r.json()}catch(e){}if(!r.ok||d.ok===false)throw new Error(d.error||('HTTP '+r.status));return d;}
+
+function switchTab(name){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $('page-'+name).classList.add('active');
+  if(name==='overview')loadStatus();
+  if(name==='pipeline')loadPipelineRuns();
+  if(name==='events')loadEvents(1);
+  if(name==='review'){rvTab('pending');loadPublishConfig();}
+  if(name==='system')loadSetup();
+}
+document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+
+// ===== 概览 =====
+async function loadStatus(){
+  try{
+    const d=await j('/api/status');
+    if(!d.config_exists){$('ov-wizard').style.display='block';$('ov-wizard').innerHTML='<b>首次使用：</b>请先到「系统」完成初始化（选存储后端、填 LLM Key）→ 保存 → 回到这里运行。';}
+    else $('ov-wizard').style.display='none';
+    const s=d.stats||{};
+    const names={raw:'原始',cleaned:'清洗库',events:'归类库',articles:'二创库',runs:'运行记录'};
+    $('ov-stats').innerHTML=Object.keys(names).map(k=>`<div class="stat"><div class="num">${s.counts?.[k]??0}</div><div class="lbl">${names[k]}</div></div>`).join('')
+      +`<div class="stat"><div class="num" style="font-size:15px">${esc(s.backend||'?')}</div><div class="lbl">存储后端</div></div>`;
+    $('ov-events').innerHTML=(d.recent_events||[]).length?`<table><thead><tr><th>事件</th><th>分类</th><th>更新时间</th><th></th></tr></thead><tbody>
+      ${(d.recent_events||[]).map(e=>`<tr class="row-click" onclick="openEventDetail('${e.event_id}')"><td>${esc(e.event_title||e.event_id)}</td><td>${esc(e.category||'-')}</td><td class="hint">${fmt(e.updated_at)}</td><td><span class="hint">${e.event_id}</span></td></tr>`).join('')}
+      </tbody></table>`:'<div class="empty">暂无事件</div>';
+    const runs=await j('/api/pipeline/runs');
+    $('ov-runs').innerHTML=renderRuns(runs.items||[]);
+  }catch(e){toast(e.message);}
+}
+
+// ===== 流水线 =====
+async function pipeRun(dry){
+  if(!dry && !confirm('确认运行流水线？'))return;
+  try{
+    const d=await j('/api/pipeline/run',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({only:$('pipe-only').value,hours:parseInt($('pipe-hours').value)||0,limit:parseInt($('pipe-limit').value)||0,dry_run:dry})});
+    toast((dry?'试运行':'运行')+'已启动：'+shortId(d.task_id));
+    $('pipe-log').textContent='等待日志...\n';
+    const es=new EventSource('/api/tasks/'+d.task_id+'/log');
+    es.onmessage=e=>{const m=JSON.parse(e.data);
+      if(m.type==='line'){$('pipe-log').textContent+=m.line+'\n';$('pipe-log').scrollTop=$('pipe-log').scrollHeight;}
+      if(m.type==='close'){es.close();$('pipe-log').textContent+='\n[完成] exit='+(m.task?.exit_code??'')+'\n';loadPipelineRuns();loadStatus();}
+    };
+    es.onerror=()=>es.close();
+    loadPipelineRuns();
+  }catch(e){toast(e.message);}
+}
+async function pipeStop(){try{const d=await j('/api/pipeline/stop',{method:'POST'});toast(d.ok?'已请求停止':'未在运行');}catch(e){toast(e.message);}}
+function pipeStatusTag(s){const m={done:['done','成功'],ok:['ok','成功'],failed:['failed','失败'],dry_run:['dry_run','试运行'],running:['running','运行中'],stopped:['stopped','停止']};const t=m[s]||['failed',String(s)];return '<span class="status-tag '+t[0]+'">'+t[1]+'</span>';}
+function renderRuns(items){return items.length?`<table><thead><tr><th>阶段</th><th>状态</th><th>参数</th><th>开始时间</th></tr></thead><tbody>
+  ${items.map(x=>`<tr><td><b>${esc(x.stage||'-')}</b></td><td>${pipeStatusTag(x.status)}</td><td class="hint">${esc(JSON.stringify(x.params||{}))}</td><td class="hint">${fmt(x.started_at)}</td></tr>`).join('')}
+  </tbody></table>`:'<div class="empty">暂无运行记录</div>';}
+async function loadPipelineRuns(){try{const d=await j('/api/pipeline/runs');$('pipe-runs').innerHTML=renderRuns(d.items||[]);}catch(e){}}
+
+// ===== 事件库 =====
+async function loadEvents(page){
+  const q=$('ev-q').value.trim();
+  try{
+    const d=await j('/api/events?q='+encodeURIComponent(q)+'&page='+page+'&limit=20');
+    $('ev-total').textContent='共 '+d.total+' 条';
+    $('ev-list').innerHTML=(d.items||[]).length?`<table><thead><tr><th>事件</th><th>分类</th><th>信源</th><th>篇数</th><th>二创</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
+      ${(d.items||[]).map(e=>`<tr class="row-click" onclick="openEventDetail('${e.event_id}')">
+        <td><div style="font-weight:600">${esc(e.event_title||e.event_id)}</div><div class="hint">${e.event_id}</div></td>
+        <td>${esc(e.category||'-')}</td><td>${(e.sources||[]).length||(e.source||'-')}</td><td>${e.article_count??'-'}</td>
+        <td>${e.generated?'<span class="status-tag ok">已生成</span>':'<span class="status-tag amber">未生成</span>'}</td>
+        <td class="hint">${fmt(e.updated_at)}</td>
+        <td style="white-space:nowrap"><button class="btn sm primary" onclick="event.stopPropagation();openEventDetail('${e.event_id}')">详情</button></td></tr>`).join('')}
+      </tbody></table>`:'<div class="empty">暂无事件</div>';
+  }catch(e){toast(e.message);}
+}
+async function openEventDetail(eventId){
+  try{
+    const d=await j('/api/events/'+eventId);
+    const ev=d.event||{};
+    const arts=d.articles||{};
+    const list=(arts.articles||[]).map((a,i)=>`<div class="art-card"><div class="t">${esc(a.title||'(无标题)')} <span class="status-tag ${a.review_status==='approved'?'ok':a.review_status==='published'?'ok':'amber'}">${esc(a.review_status||'pending')}</span></div><div class="hint">${fmt(a.reviewed_at)}</div><button class="btn sm" ${readBtn(Object.assign({}, a, {event_id: eventId, _idx: i}))}</div>`).join('')||'<div class="empty">暂无二创文章</div>';
+    const versions=(arts.versions||[]).map(v=>`<span style="margin-right:8px">v${v.version} ${fmt(v.archived_at)} <button class="btn sm" onclick="doRollback('${eventId}',${v.version})">回滚到此</button></span>`).join('');
+    $('modal-title').textContent=esc(ev.event_title||eventId);
+    $('modal-body').innerHTML=`
+      <div class="hint" style="margin-bottom:8px">${eventId} · 分类：${esc(ev.category||'-')} · 更新：${fmt(ev.updated_at)}</div>
+      <div class="flex" style="margin-bottom:10px">
+        <button class="btn primary" onclick="genEvent('${eventId}')">生成二创</button>
+        ${versions?`<span>版本：${versions}</span>`:''}
+      </div><h3>二创文章</h3>${list}`;
+    openModal();
+  }catch(e){toast(e.message);}
+}
+async function genEvent(eventId){try{const d=await j('/api/events/'+eventId+'/generate',{method:'POST'});toast('生成任务已启动：'+shortId(d.task_id));}catch(e){toast(e.message);}}
+async function doRollback(eventId,version){try{const d=await j('/api/events/'+eventId+'/rollback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version})});toast(d.ok?'已回滚到 v'+version:'回滚失败');if(d.ok)openEventDetail(eventId);}catch(e){toast(e.message);}}
+
+// ===== 审核发布 =====
+function rvTab(name){
+  document.querySelectorAll('.subnav button').forEach(b=>b.classList.toggle('active',b.dataset.rv===name));
+  ['pending','publish','logs','settings'].forEach(k=>{$('rv-'+k).style.display=(k===name)?'block':'none';});
+  if(name==='pending')loadReviewQueue();
+  if(name==='publish')loadPublishList();
+  if(name==='logs')loadPublishLogs();
+  if(name==='settings')loadPublishConfig();
+}
+async function loadReviewQueue(){
+  try{
+    const d=await j('/api/review/queue?status=pending');
+    $('rv-list').innerHTML=(d.items||[]).length?`<table><thead><tr><th>事件</th><th>文章标题</th><th>操作</th></tr></thead><tbody>
+      ${(d.items||[]).map(a=>`<tr><td class="hint">${esc(a.event_id)}</td><td>${esc(a.title||'(无标题)')}</td>
+        <td style="white-space:nowrap"><button class="btn sm ok" onclick="reviewSet('${a.event_id}',${a._idx},'approved','')">通过</button>
+        <button class="btn sm danger" onclick="reviewSet('${a.event_id}',${a._idx},'rejected','')">驳回</button>
+        <button class="btn sm" ${readBtn(a)}</td></tr>`).join('')}
+      </tbody></table>`:'<div class="empty">暂无待审核文章</div>';
+  }catch(e){toast(e.message);}
+}
+async function reviewSet(eventId,idx,status,note){
+  try{const d=await j('/api/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:eventId,idx,status,note})});
+    toast(d.ok?'已'+({approved:'通过',rejected:'驳回',pending:'撤销'}[status]||status):'操作失败');loadReviewQueue();loadPublishList();
+  }catch(e){toast(e.message);}
+}
+async function loadPublishList(){
+  try{
+    const d=await j('/api/review/queue?status=approved');
+    $('rv-pub-list').innerHTML=(d.items||[]).length?`<table><thead><tr><th>事件</th><th>文章标题</th><th>操作</th></tr></thead><tbody>
+      ${(d.items||[]).map(a=>`<tr><td class="hint">${esc(a.event_id)}</td><td>${esc(a.title||'(无标题)')}</td>
+        <td><button class="btn sm primary" onclick="publishOne('${a.event_id}',${a._idx},false)">发布</button>
+        <button class="btn sm" onclick="publishOne('${a.event_id}',${a._idx},true)">预览(dry-run)</button></td></tr>`).join('')}
+      </tbody></table>`:'<div class="empty">暂无已通过文章</div>';
+  }catch(e){toast(e.message);}
+}
+async function publishOne(eventId,idx,dry){
+  try{
+    const d=await j('/api/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_id:eventId,idx,dry_run:dry})});
+    if(dry){toast('预览：'+ (d.error||(d.url||'')+' '+(d.headers?JSON.stringify(d.body):'')));}
+    else if(d.ok){toast('已发布（'+ (d.backend||'?') +'）');}
+    else toast('发布失败：'+(d.error||d.message||''));
+    loadPublishList();loadPublishLogs();
+  }catch(e){toast(e.message);}
+}
+async function publishAll(dry){
+  try{
+    const d=await j('/api/review/queue?status=approved');
+    const items=(d.items||[]).map(a=>({event_id:a.event_id,idx:a._idx}));
+    if(!items.length){toast('没有可发布的文章');return;}
+    const r=await j('/api/publish/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,dry_run:dry})});
+    toast((dry?'预览':'发布')+'完成：'+((r.items||[]).filter(x=>x.ok).length)+'/'+items.length);
+    loadPublishList();loadPublishLogs();
+  }catch(e){toast(e.message);}
+}
+async function loadPublishLogs(){
+  try{const d=await j('/api/publish/logs');
+    $('rv-log-list').innerHTML=(d.items||[]).length?`<table><thead><tr><th>时间</th><th>事件</th><th>标题</th><th>后端</th><th>结果</th></tr></thead><tbody>
+      ${(d.items||[]).map(l=>`<tr><td class="hint">${fmt(l.published_at)}</td><td class="hint">${esc(l.event_id||'')}</td><td>${esc(l.title||'')}</td><td>${esc(l.backend||'')}</td><td class="hint">${esc((l.response||l.error||'').toString().slice(0,80))}</td></tr>`).join('')}
+      </tbody></table>`:'<div class="empty">暂无发布记录</div>';
+  }catch(e){toast(e.message);}
+}
+async function loadPublishConfig(){
+  try{
+    const d=await j('/api/publish/config');
+    const p=d.publish||{};const api=p.api||{};
+    $('pub-backend-sel').value=(p.backend||'none');
+    $('pub-url').value=api.url||'';$('pub-method').value=api.method||'POST';
+    $('pub-headers').value=JSON.stringify(api.headers||{},null,2);
+    $('pub-defaults').value=JSON.stringify(api.defaults||{},null,2);
+    $('pub-backend').textContent=(p.backend||'none');
+  }catch(e){toast(e.message);}
+}
+async function savePublishConfig(){
+  try{
+    let headers={},defaults={};
+    try{headers=JSON.parse($('pub-headers').value||'{}');}catch(e){toast('Headers 不是合法 JSON');return;}
+    try{defaults=JSON.parse($('pub-defaults').value||'{}');}catch(e){toast('Defaults 不是合法 JSON');return;}
+    const publish={backend:$('pub-backend-sel').value,api:{url:$('pub-url').value,method:$('pub-method').value,headers,defaults}};
+    await j('/api/publish/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({publish})});
+    $('pub-msg').textContent='✓ 已保存';$('pub-backend').textContent=publish.backend;toast('发布设置已保存');
+  }catch(e){toast(e.message);}
+}
+
+// ===== 搜索阅读 =====
+async function doSearch(){
+  const q=$('rd-q').value.trim();if(!q)return;
+  try{
+    const d=await j('/api/search?q='+encodeURIComponent(q));
+    $('rd-events').innerHTML=(d.events||[]).length?`<table><thead><tr><th>事件</th><th>更新时间</th><th></th></tr></thead><tbody>
+      ${(d.events||[]).map(e=>`<tr class="row-click" onclick="openEventDetail('${e.event_id}')"><td>${esc(e.event_title||e.event_id)}</td><td class="hint">${fmt(e.updated_at)}</td><td><span class="hint">${e.event_id}</span></td></tr>`).join('')}
+      </tbody></table>`:'<div class="empty">无事件结果</div>';
+    $('rd-articles').innerHTML=(d.articles||[]).length?`<table><thead><tr><th>文章</th><th>事件</th><th></th></tr></thead><tbody>
+      ${(d.articles||[]).map(a=>`<tr><td>${esc(a.title||'(无标题)')}</td><td class="hint">${esc(a.event_id)}</td><td><button class="btn sm" ${readBtn(a)}</td></tr>`).join('')}
+      </tbody></table>`:'<div class="empty">无文章结果</div>';
+  }catch(e){toast(e.message);}
+}
+function readArticle(key){
+  const d=READ_CACHE[key]||{};
+  $('modal-title').textContent=esc(d.title||'(无标题)');
+  $('modal-body').innerHTML='<div class="art-body">'+esc(d.content||'(无内容)')+'</div>';
+  openModal();
+}
+
+// ===== 弹窗 =====
+function openModal(){$('modal').style.display='block';$('modal').scrollTop=0;}
+function closeModal(){$('modal').style.display='none';}
+
+// ===== 系统/设置 =====
+const ST_FIELDS={
+  file:{fields:[['root','本地数据目录','data']]},
+  mongo:{fields:[['uri','连接串','mongodb://localhost:27017'],['database','数据库','data_to_article']]},
+  mysql:{fields:[['host','主机','localhost'],['port','端口','3306'],['user','用户','root'],['password','密码',''],['database','数据库','data_to_article'],['table_prefix','表前缀','dta_']]}
+};
+function renderStorageFields(){const b=$('st-backend').value;$('st-fields').innerHTML=ST_FIELDS[b].fields.map(([k,label,ph])=>`<label>${label} <input id="st-${k}" placeholder="${ph}" value="${ph}"></label>`).join('');$('st-colls').style.display=(b==='mongo')?'block':'none';}
+async function testStorage(){
+  const b=$('st-backend').value;const body={backend:b};
+  ST_FIELDS[b].fields.forEach(([k])=>{const v=$('st-'+k)?.value;if(v!==undefined)body[k]=v;});
+  try{const d=await j('/api/setup/test-storage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    $('st-msg').textContent=d.ok?('✓ '+d.message):('✗ '+d.error);
+  }catch(e){$('st-msg').textContent='✗ '+e.message;}
+}
+const LLM_FIELDS={openai_compat:[['base_url','Base URL','https://api.deepseek.com'],['model','模型','deepseek-chat'],['key','API Key','']],
+  anthropic:[['base_url','Base URL','https://api.anthropic.com'],['model','模型','claude-sonnet-4-20250514'],['key','API Key','']],
+  gemini:[['model','模型','gemini-2.0-flash'],['key','API Key','']],mock:[]};
+function renderLlmFields(){const p=$('llm-provider').value;$('llm-fields').innerHTML=LLM_FIELDS[p].map(([k,label,ph])=>`<label>${label} <input type="${k==='key'?'password':'text'}" id="llm-${k}" placeholder="${ph}" ${k==='key'?'autocomplete="off"':''}></label>`).join('');}
+async function testLlm(){
+  const p=$('llm-provider').value;const key=$('llm-key')?.value||'';
+  try{const d=await j('/api/setup/test-llm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:p,api_key:key})});
+    $('llm-msg').textContent=d.ok?('✓ '+d.message):('✗ '+d.error);
+  }catch(e){$('llm-msg').textContent='✗ '+e.message;}
+}
+async function loadSetup(){
+  try{
+    const d=await j('/api/status');const st=d.storage||{};const llm=d.llm||{};const sch=d.schedule||{};
+    if(st.backend)$('st-backend').value=st.backend;
+    const p=llm.provider||'openai_compat';$('llm-provider').value=p;
+    renderStorageFields();renderLlmFields();
+    if(st.backend==='mongo'&&st.uri)$('st-uri').value=st.uri;
+    if(st.backend==='mongo'&&st.database)$('st-database').value=st.database;
+    if(st.backend==='mongo'){const cl=st.collections||{};
+      ['cleaned','events','article'].forEach(k=>{});
+      $('coll-cleaned').value=cl.cleaned||'articles';
+      $('coll-events').value=cl.events||'events';
+      $('coll-articles').value=cl.event_articles||'event_articles';
+      $('coll-raw').value=cl.raw||'raw_articles';
+      $('coll-runs').value=cl.runs||'pipeline_runs';
+      $('coll-fps').value=cl.fps||'content_fps';
+    }
+    if(st.backend==='mysql'){const m=st.mysql||{};Object.keys(m).forEach(k=>{const el=$('st-'+k);if(el&&m[k]!==undefined&&m[k]!=='')el.value=m[k];});}
+    const dly=(sch.daily||{});
+    if(dly.wash_classify_time)$('sch-wc').value=dly.wash_classify_time;
+    if(dly.generate_time)$('sch-gen').value=dly.generate_time;
+    $('sch-catch').checked=(dly.catch_up!==false);
+  }catch(e){toast(e.message);}
+}
+async function saveSetup(){
+  try{
+    const b=$('st-backend').value;const storage={backend:b};
+    ST_FIELDS[b].fields.forEach(([k])=>{const v=$('st-'+k)?.value;if(v!==undefined)storage[k]=v;});
+    if(b==='mongo'){storage.collections={
+      cleaned:$('coll-cleaned').value.trim(),events:$('coll-events').value.trim(),
+      event_articles:$('coll-articles').value.trim(),raw:$('coll-raw').value.trim(),
+      runs:$('coll-runs').value.trim(),fps:$('coll-fps').value.trim()};}
+    const p=$('llm-provider').value;const llm={provider:p};
+    LLM_FIELDS[p].forEach(([k])=>{const v=$('llm-'+k)?.value;if(v)llm[k]=v;});
+    const keys={};
+    if(p==='openai_compat'&&$('llm-key')?.value)keys.DEEPSEEK_API_KEY=$('llm-key').value;
+    if(p==='anthropic'&&$('llm-key')?.value)keys.ANTHROPIC_API_KEY=$('llm-key').value;
+    if(p==='gemini'&&$('llm-key')?.value)keys.GEMINI_API_KEY=$('llm-key').value;
+    const schedule={mode:'daily',daily:{wash_classify_time:$('sch-wc').value,generate_time:$('sch-gen').value,catch_up:$('sch-catch').checked}};
+    const d=await j('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({storage,llm,schedule,keys})});
+    $('save-msg').textContent='✓ 已保存：'+d.config;toast('设置已保存');
+  }catch(e){toast(e.message);}
+}
+$('st-backend').addEventListener('change',renderStorageFields);
+$('llm-provider').addEventListener('change',renderLlmFields);
+renderStorageFields();renderLlmFields();
+switchTab('overview');
+
+// ===== 本地 UI 适配层（覆盖旧版函数，视觉与本地二创面板一致）=====
+function switchTab(name){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('view-'+name).classList.add('active');
+  if(name==='overview')loadStatus();
+  if(name==='pipeline')loadPipelineRuns();
+  if(name==='events')loadEvents(1);
+  if(name==='review'){rvTab('pending');loadPublishConfig();}
+  if(name==='system')loadSetup();
+}
+function rvTab(name){
+  document.querySelectorAll('.rv-tab').forEach(b=>b.classList.toggle('active',b.dataset.rv===name));
+  ['pending','publish','logs','settings'].forEach(k=>{$('rv-'+k).style.display=(k===name)?'block':'none';});
+  if(name==='pending')loadReviewQueue();
+  if(name==='publish')loadPublishList();
+  if(name==='logs')loadPublishLogs();
+  if(name==='settings')loadPublishConfig();
+}
+function openModal(){$('modal').classList.add('open');}
+function closeModal(){$('modal').classList.remove('open');}
+function openDrawer(title,html){$('drawer-title').textContent=title;$('drawer-body').innerHTML=html;$('drawer').classList.add('open');}
+function closeDrawer(){$('drawer').classList.remove('open');}
+function artStatus(s){const m={approved:['ok','已通过'],published:['ok','已发布'],rejected:['red','已驳回'],pending:['amber','待审']};const t=m[s]||['no',s||'pending'];return `<span class="badge ${t[0]}">${t[1]}</span>`;}
+async function openEventDetail(eventId){
+  try{
+    const d=await j('/api/events/'+eventId);
+    const ev=d.event||{};const arts=d.articles||{};
+    const list=(arts.articles||[]).map((a,i)=>`<div class="art-card"><div class="t">${esc(a.title||'(无标题)')} ${artStatus(a.review_status)}</div><div class="hint">${fmt(a.reviewed_at)}</div><div style="margin-top:6px">${readBtn(Object.assign({},a,{event_id:eventId,_idx:i}))}</div></div>`).join('')||'<div class="empty">暂无二创文章</div>';
+    const versions=(arts.versions||[]).map(v=>`<button class="btn sm" onclick="doRollback('${eventId}',${v.version})">回滚到 v${v.version}</button>`).join(' ');
+    openDrawer(esc(ev.event_title||eventId),
+      `<div class="kv"><dt>event_id</dt><dd class="mono">${eventId}</dd><dt>分类</dt><dd>${esc(ev.category||'-')}</dd><dt>更新时间</dt><dd>${fmt(ev.updated_at)}</dd></div>
+       <div class="filters"><button class="btn primary" onclick="genEvent('${eventId}')">生成二创</button>${versions?`<span class="hint">版本：${versions}</span>`:''}</div>
+       <h3 style="margin:8px 0">二创文章</h3>${list}`);
+  }catch(e){toast(e.message);}
+}
+
+// ===== 阅读器（事件阅读器 / 审核阅读器 / 参考原文）=====
+function readBtn(a){
+  const k=(a.event_id||'e')+'_'+(a._idx??0);
+  READ_CACHE[k]={title:a.title||'',content:a.content||'',kind:(a.content_fp||a.fp)?'ref':'gen',event_id:a.event_id||'',_idx:a._idx??0,fp:a.content_fp||a.fp||''};
+  return `<button class="btn sm" onclick="readByKey('${k}')">阅读</button>`;
+}
+function readByKey(k){
+  const d=READ_CACHE[k]||{};
+  if(d.kind==='ref'&&d.fp){openArticleLink(d.fp);return;}
+  if(d.kind==='gen'&&d.event_id){readGenerated(d.event_id,d._idx||0);return;}
+  $('modal-title').textContent=esc(d.title||'');
+  $('modal-body').innerHTML='<div class="art-body">'+esc(d.content||'(无内容)')+'</div>';
+  openModal();
+}
+async function readGenerated(eventId,idx){
+  try{
+    const d=await j('/api/events/'+eventId);
+    const gen=d.articles||{};
+    if(!gen.articles||!gen.articles.length){toast('该事件暂无二创文章');return;}
+    switchTab('reader');
+    renderGeneratedReader(gen,d.event||{},idx||0);
+  }catch(e){toast(e.message);}
+}
+function renderGeneratedReader(gen,event,idx){
+  const arts=gen.articles||[];const a=arts[idx]||arts[0];
+  if(!a){$('reader-pane').innerHTML='<div class="reader-empty">无二创内容</div>';return;}
+  const eid=event.event_id||gen.event_id||'';
+  const cat=event.category||'-';
+  const ver=(gen.versions||[]).length;
+  $('reader-pane').innerHTML=`
+    <div class="reader-kicker"><span class="mono">${esc(eid)}</span><span class="badge cat">${esc(cat)}</span>${artStatus(a.review_status)}${ver?`<span class="badge cat">v${ver}</span>`:''}</div>
+    <h1 class="reader-title">${esc(a.title||'(无标题)')}</h1>
+    <div class="reader-meta">
+      <span>视角：${esc(a.viewpoint||'-')}</span><span>风格：${esc(a.style||'-')}</span>
+      <span>字数：${a.word_count||(a.content?a.content.length:0)}</span><span>生成：${fmt(gen.ai_generated_at)}</span>
+    </div>
+    <div class="reader-content">${esc(a.content||'(无正文)')}</div>
+    <div class="reader-actions">
+      <button class="btn" onclick="openEventDetail('${eid}')">事件详情</button>
+      <span style="flex:1"></span>
+      <button class="btn sm" onclick="reviewSet('${eid}',${idx},'pending','')">待审</button>
+      <button class="btn sm" onclick="reviewSet('${eid}',${idx},'approved','')">通过</button>
+      <button class="btn sm" onclick="reviewSet('${eid}',${idx},'rejected','')">驳回</button>
+      <button class="btn sm primary" onclick="publishOne('${eid}',${idx},false)">发布</button>
+      <button class="btn sm" onclick="publishOne('${eid}',${idx},true)">预览</button>
+    </div>`;
+  if(arts.length>1){
+    $('reader-pane').insertAdjacentHTML('beforeend',`<div style="margin-top:18px;padding-top:14px;border-top:1px solid #edf1f4"><h3 style="font-size:13px;margin-bottom:8px">同事件其他视角</h3>
+      ${arts.map((x,i)=>`<div class="result-item" onclick="readGenerated('${eid}',${i})"><span class="badge ${i===idx?'ok':'no'}">${i===idx?'当前':'切换'}</span><span>${esc(x.title)}</span><span class="hint">${esc(x.viewpoint||'')}</span></div>`).join('')}</div>`);
+  }
+}
+function renderRawArticle(a,fp){
+  $('reader-pane').innerHTML=`
+    <div class="reader-kicker"><span class="mono">content_fp：${esc(fp)}</span><span class="badge cat">${esc(a.etl_collection||'')}</span></div>
+    <h1 class="reader-title">${esc(a.title||'(无标题)')}</h1>
+    <div class="reader-meta"><span>信源：${esc(a.source||'-')}</span><span>时间：${fmt(a.pub_time)}</span></div>
+    <div class="reader-content">${esc(a.content||'(无正文)')}</div>
+    <div class="reader-actions">
+      ${a.url?`<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener">打开原文 <svg class="ic"><use href="#i-ext"/></svg></a>`:''}
+      <button class="btn" onclick="history.back()">返回</button>
+    </div>`;
+}
+async function openArticleLink(fp){
+  switchTab('reader');
+  try{
+    const d=await j('/api/content/'+fp);
+    if(!d.ok||!d.article){$('reader-pane').innerHTML='<div class="reader-empty">未找到 content_fp：<span class="mono">'+esc(fp)+'</span></div>';return;}
+    renderRawArticle(d.article,fp);
+  }catch(e){$('reader-pane').innerHTML='<div class="reader-empty">'+esc(e.message)+'</div>';}
+}
+async function openEventDetail(eventId){
+  try{
+    const d=await j('/api/events/'+eventId);
+    const ev=d.event||{};const arts=d.articles||{};
+    const refs=(ev.articles||[]).map((r,i)=>`<div class="art-card"><div class="t">${esc(r.title||'(无标题)')}</div><div class="hint">${esc(r.etl_collection||'')} · ${fmt(r.pub_time)}</div><div style="margin-top:6px">${readBtn({event_id:eventId,_idx:'ref_'+i,content_fp:r.content_fp,title:r.title||'',content:''})}</div></div>`).join('')||'<div class="empty">暂无参考原文</div>';
+    const list=(arts.articles||[]).map((a,i)=>`<div class="art-card"><div class="t">${esc(a.title||'(无标题)')} ${artStatus(a.review_status)}</div><div class="hint">${fmt(a.reviewed_at)}</div><div style="margin-top:6px">${readBtn(Object.assign({},a,{event_id:eventId,_idx:i}))}</div></div>`).join('')||'<div class="empty">暂无二创文章</div>';
+    const versions=(arts.versions||[]).map(v=>`<button class="btn sm" onclick="doRollback('${eventId}',${v.version})">回滚到 v${v.version}</button>`).join(' ');
+    openDrawer(esc(ev.event_title||eventId),
+      `<div class="kv"><dt>event_id</dt><dd class="mono">${eventId}</dd><dt>分类</dt><dd>${esc(ev.category||'-')}</dd><dt>更新时间</dt><dd>${fmt(ev.updated_at)}</dd>${ev.overview?`<dt>概述</dt><dd>${esc(ev.overview)}</dd>`:''}</div>
+       <div class="filters"><button class="btn primary" onclick="genEvent('${eventId}')">生成二创</button>${versions?`<span class="hint">版本：${versions}</span>`:''}</div>
+       <h3 style="margin:8px 0">参考原文（${(ev.articles||[]).length}）</h3>${refs}
+       <h3 style="margin:8px 0">二创文章</h3>${list}`);
+  }catch(e){toast(e.message);}
+}
+
+</script>
+</body>
+</html>

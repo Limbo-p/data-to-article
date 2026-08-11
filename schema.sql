@@ -65,3 +65,10 @@ CREATE TABLE IF NOT EXISTS dta_runs (
   started_at  VARCHAR(64),
   finished_at VARCHAR(64)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 发布记录
+CREATE TABLE IF NOT EXISTS dta_publish (
+  id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+  doc          JSON NOT NULL,
+  published_at VARCHAR(64)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

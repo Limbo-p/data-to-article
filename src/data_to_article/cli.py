@@ -71,7 +71,8 @@ def _cmd_generate(args) -> int:
     storage = get_storage(config)
     llm = create_llm_client(config)
     engine = GenerateEngine(config, storage, llm)
-    stats = engine.process_batch(hours=args.hours, limit=args.limit, dry_run=args.dry_run)
+    stats = engine.process_batch(hours=args.hours, limit=args.limit,
+                                 dry_run=args.dry_run, event_id=args.event)
     storage.record_run("generate", "dry_run" if args.dry_run else "ok", stats)
     return 0
 
@@ -111,6 +112,12 @@ def _cmd_run(args) -> int:
     return 0
 
 
+def _cmd_serve(args) -> int:
+    """启动总控面板（初始化向导 + 流水线运行）。"""
+    from data_to_article.web.server import main as serve_main
+    return serve_main(host=args.host, port=args.port, no_browser=args.no_browser)
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="dta", description="data-to-article：清洗 -> 归类 -> 二创 流水线")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -138,6 +145,7 @@ def main(argv=None) -> int:
     p_gen.add_argument("--config", default="")
     p_gen.add_argument("--hours", type=int, default=168)
     p_gen.add_argument("--limit", type=int, default=0)
+    p_gen.add_argument("--event", default="", help="只处理指定 event_id（单事件生成）")
     p_gen.add_argument("--dry-run", action="store_true")
 
     p_run = sub.add_parser("run", help="运行流水线（wash -> classify -> generate）")
@@ -147,6 +155,11 @@ def main(argv=None) -> int:
     p_run.add_argument("--limit", type=int, default=0)
     p_run.add_argument("--dry-run", action="store_true")
 
+    p_serve = sub.add_parser("serve", help="启动总控面板（初始化向导 + 流水线运行）")
+    p_serve.add_argument("--host", default="127.0.0.1", help="监听地址（默认 127.0.0.1）")
+    p_serve.add_argument("--port", type=int, default=8765, help="端口（默认 8765）")
+    p_serve.add_argument("--no-browser", action="store_true", help="不自动打开浏览器")
+
     args = parser.parse_args(argv)
     handlers = {
         "ingest": _cmd_ingest,
@@ -154,6 +167,7 @@ def main(argv=None) -> int:
         "classify": _cmd_classify,
         "generate": _cmd_generate,
         "run": _cmd_run,
+        "serve": _cmd_serve,
     }
     return handlers[args.command](args)
 

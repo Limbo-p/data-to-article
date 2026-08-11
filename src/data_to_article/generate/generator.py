@@ -104,9 +104,12 @@ class GenerateEngine:
 
     # ---------- 主流程 ----------
 
-    def process_batch(self, hours: int = 168, limit: int = 0, dry_run: bool = False) -> dict:
+    def process_batch(self, hours: int = 168, limit: int = 0, dry_run: bool = False,
+                       event_id: str = "") -> dict:
         self.dry_run = dry_run
         events = self._find_unprocessed(hours, limit)
+        if event_id:
+            events = [e for e in events if e.get("event_id") == event_id]
         print(f"[generate] 待处理事件 {len(events)} 个（窗口 {hours}h）")
         if not events:
             return {"ok": 0, "skipped": 0, "failed": 0, "total": 0}

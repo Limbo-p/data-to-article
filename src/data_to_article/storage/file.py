@@ -26,6 +26,7 @@ class JsonFileBackend(StorageBackend):
             "events": self.root / "events",
             "articles": self.root / "articles",
             "runs": self.root / "runs",
+            "publish": self.root / "publish",
         }
         for d in self._dirs.values():
             d.mkdir(parents=True, exist_ok=True)
@@ -189,6 +190,71 @@ class JsonFileBackend(StorageBackend):
 
     def articles_exist(self, event_id: str) -> bool:
         return (self._dirs["articles"] / f"{event_id}.json").exists()
+
+    # ---- articles: 读回 / 审核 / 回滚 / 搜索 ----
+    def get_event_articles(self, event_id: str) -> Optional[dict]:
+        return self._read("articles", event_id)
+
+    def set_article_review(self, event_id: str, article_idx: int,
+                           status: str, note: str = "") -> bool:
+        doc = self._read("articles", event_id)
+        if not doc or not doc.get("articles") or article_idx >= len(doc["articles"]):
+            return False
+        arts = list(doc["articles"])
+        art = dict(arts[article_idx])
+        art["review_status"] = status
+        art["reviewed_at"] = _now()
+        if note:
+            art["review_note"] = note
+        arts[article_idx] = art
+        doc["articles"] = arts
+        self._write("articles", event_id, doc)
+        return True
+
+    def rollback_articles(self, event_id: str, version: int) -> bool:
+        doc = self._read("articles", event_id)
+        if not doc:
+            return False
+        for v in doc.get("versions") or []:
+            if int(v.get("version")) == int(version):
+                doc["articles"] = v.get("articles", [])
+                doc["ai_generated_at"] = v.get("archived_at", _now())
+                self._write("articles", event_id, doc)
+                return True
+        return False
+
+    def search_articles(self, keyword: str = "", limit: int = 0) -> list[dict]:
+        rx = re.compile(re.escape(keyword), re.I) if keyword else None
+        out = []
+        for name in self._list("articles"):
+            doc = self._read("articles", name)
+            if not doc:
+                continue
+            for idx, art in enumerate(doc.get("articles") or []):
+                hay = " ".join([str(art.get("title", "")), str(art.get("content", ""))])
+                if rx is not None and not rx.search(hay):
+                    continue
+                item = dict(art)
+                item["event_id"] = doc.get("event_id", name)
+                item["_idx"] = idx
+                out.append(item)
+                if limit and len(out) >= limit:
+                    return out
+        return out
+
+    # ---- publish ----
+    def record_publish(self, log: dict) -> None:
+        name = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}_{uuid.uuid4().hex[:6]}"
+        self._write("publish", name, log)
+
+    def list_publish_logs(self, limit: int = 20) -> list[dict]:
+        out = []
+        for name in sorted(self._list("publish"), reverse=True)[:limit]:
+            d = self._read("publish", name)
+            if d:
+                d["_id"] = name
+                out.append(d)
+        return out
 
     # ---- runs ----
     def record_run(self, stage: str, status: str, params: dict, log_tail: str = "") -> None:

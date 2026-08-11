@@ -41,7 +41,7 @@ class MySqlBackend(StorageBackend):
         self.database = database or os.environ.get("MYSQL_DB", "data_to_article")
         self.prefix = table_prefix or "dta_"
         self._t = {k: f"{self.prefix}{k}" for k in
-                   ("raw", "cleaned", "dedup", "events", "articles", "runs")}
+                   ("raw", "cleaned", "dedup", "events", "articles", "runs", "publish")}
         self._ensure_schema()
 
     # ===================== 连接与建表 =====================
@@ -120,6 +120,13 @@ class MySqlBackend(StorageBackend):
                     f" log_tail TEXT,"
                     f" started_at VARCHAR(64),"
                     f" finished_at VARCHAR(64)"
+                    f") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+                )
+                cur.execute(
+                    f"CREATE TABLE IF NOT EXISTS {self._q(self._t['publish'])} ("
+                    f" id BIGINT AUTO_INCREMENT PRIMARY KEY,"
+                    f" doc JSON NOT NULL,"
+                    f" published_at VARCHAR(64)"
                     f") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
                 )
         finally:
@@ -408,6 +415,128 @@ class MySqlBackend(StorageBackend):
                 return cur.fetchone() is not None
         finally:
             conn.close()
+
+    # ===================== 二创库：读回 / 审核 / 回滚 / 搜索 =====================
+
+    def get_event_articles(self, event_id: str) -> Optional[dict]:
+        conn = self._connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT doc FROM {self._q(self._t['articles'])} WHERE event_id=%s",
+                            (event_id,))
+                row = cur.fetchone()
+                return json.loads(row["doc"]) if row and row.get("doc") else None
+        finally:
+            conn.close()
+
+    def _update_articles_doc(self, event_id: str, doc: dict) -> None:
+        conn = self._connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"UPDATE {self._q(self._t['articles'])} SET doc=%s "
+                    f"WHERE event_id=%s",
+                    (json.dumps(doc, ensure_ascii=False), event_id),
+                )
+        finally:
+            conn.close()
+
+    def set_article_review(self, event_id: str, article_idx: int,
+                           status: str, note: str = "") -> bool:
+        doc = self.get_event_articles(event_id)
+        if not doc or not doc.get("articles") or article_idx >= len(doc["articles"]):
+            return False
+        arts = list(doc["articles"])
+        art = dict(arts[article_idx])
+        art["review_status"] = status
+        art["reviewed_at"] = _now()
+        if note:
+            art["review_note"] = note
+        arts[article_idx] = art
+        doc["articles"] = arts
+        self._update_articles_doc(event_id, doc)
+        return True
+
+    def rollback_articles(self, event_id: str, version: int) -> bool:
+        doc = self.get_event_articles(event_id)
+        if not doc:
+            return False
+        for v in doc.get("versions") or []:
+            if int(v.get("version")) == int(version):
+                doc["articles"] = v.get("articles", [])
+                doc["ai_generated_at"] = v.get("archived_at", _now())
+                self._update_articles_doc(event_id, doc)
+                return True
+        return False
+
+    def search_articles(self, keyword: str = "", limit: int = 0) -> list[dict]:
+        sql = f"SELECT event_id, doc FROM {self._q(self._t['articles'])}"
+        args = []
+        if keyword:
+            sql += " WHERE doc LIKE %s"
+            args.append(f"%{keyword}%")
+        sql += " ORDER BY ai_generated_at DESC"
+        if limit > 0:
+            sql += " LIMIT %s"
+            args.append(limit)
+        conn = self._connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql, args)
+                rows = cur.fetchall()
+        finally:
+            conn.close()
+        import re as _re
+        rx = _re.compile(_re.escape(keyword), _re.I) if keyword else None
+        out = []
+        for r in rows:
+            try:
+                doc = json.loads(r["doc"])
+            except Exception:
+                continue
+            for idx, art in enumerate(doc.get("articles") or []):
+                hay = " ".join([str(art.get("title", "")), str(art.get("content", ""))])
+                if rx is not None and not rx.search(hay):
+                    continue
+                item = dict(art)
+                item["event_id"] = r.get("event_id")
+                item["_idx"] = idx
+                out.append(item)
+                if limit and len(out) >= limit:
+                    return out
+        return out
+
+    # ===================== 发布记录 =====================
+
+    def record_publish(self, log: dict) -> None:
+        now = _now()
+        conn = self._connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"INSERT INTO {self._q(self._t['publish'])} "
+                    f"(doc, published_at) VALUES (%s,%s)",
+                    (json.dumps(log, ensure_ascii=False), now),
+                )
+        finally:
+            conn.close()
+
+    def list_publish_logs(self, limit: int = 20) -> list[dict]:
+        conn = self._connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT doc FROM {self._q(self._t['publish'])} "
+                            f"ORDER BY id DESC LIMIT %s", (limit,))
+                rows = cur.fetchall()
+        finally:
+            conn.close()
+        out = []
+        for r in rows:
+            try:
+                out.append(json.loads(r["doc"]))
+            except Exception:
+                pass
+        return out
 
     # ===================== 运行记录 =====================
 

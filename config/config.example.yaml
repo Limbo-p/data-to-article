@@ -19,6 +19,31 @@
       "password": "",
       "database": "data_to_article",
       "table_prefix": "dta_"
+    },
+    "publish": {
+      "backend": "none",
+      "api": {
+        "url": "",
+        "method": "POST",
+        "headers": {
+          "CLIENT": "web",
+          "APPID": "",
+          "NONCE": "",
+          "CURTIME": "",
+          "OPENKEY": "",
+          "PLATFORM": "2"
+        },
+        "defaults": {
+          "author": "",
+          "categoryId": 0,
+          "channel": 0,
+          "coverType": 1,
+          "cssType": 0,
+          "fromTypeId": 2,
+          "isReprint": 0,
+          "showState": 1
+        }
+      }
     }
   },
   "mysql": {
