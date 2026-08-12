@@ -163,7 +163,8 @@ class GenerateEngine:
     def _find_unprocessed(self, hours: int, limit: int):
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
         out = []
-        for evt in self.storage.query_events(limit=limit):
+        # limit ??"???? N ??????"?????? updated_at ?????? N ???
+        for evt in self.storage.query_events(limit=0):
             if evt.get("status", "active") != "active":
                 continue
             if str(evt.get("updated_at", "")) < cutoff:
@@ -171,6 +172,8 @@ class GenerateEngine:
             if self.storage.articles_exist(evt.get("event_id", "")):
                 continue
             out.append(evt)
+            if limit > 0 and len(out) >= limit:
+                break
         return out
 
     def _load_articles(self, event):
