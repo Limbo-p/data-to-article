@@ -785,4 +785,10 @@ def main(host: str = "127.0.0.1", port: int = 8765, no_browser: bool = False) ->
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    import argparse as _argparse
+    _ap = _argparse.ArgumentParser(prog="python -m data_to_article.web.server")
+    _ap.add_argument("--host", default="127.0.0.1")
+    _ap.add_argument("--port", type=int, default=8765)
+    _ap.add_argument("--no-browser", action="store_true")
+    _args = _ap.parse_args()
+    sys.exit(main(host=_args.host, port=_args.port, no_browser=_args.no_browser))

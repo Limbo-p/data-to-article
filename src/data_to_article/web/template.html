@@ -318,6 +318,7 @@ pre{font-family:Consolas,monospace}
         <button class="btn" onclick="testLlm()">验证</button><span class="hint" id="llm-msg"></span>
       </div>
       <div id="llm-fields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:6px"></div>
+      <div class="hint" id="llm-key-hint" style="margin-top:6px"></div>
     </div>
     <div class="panel">
       <h2>③ 调度（可选）</h2>
@@ -572,12 +573,19 @@ async function testLlm(){
     $('llm-msg').textContent=d.ok?('✓ '+d.message):('✗ '+d.error);
   }catch(e){$('llm-msg').textContent='✗ '+e.message;}
 }
+function updateKeyHint(keys){
+  const el=$('llm-key-hint'); if(!el) return;
+  const map={'openai_compat':'DEEPSEEK_API_KEY','anthropic':'ANTHROPIC_API_KEY','gemini':'GEMINI_API_KEY'};
+  const k=map[$('llm-provider').value]; const v=keys&&keys[k];
+  el.textContent = v ? ('✓ 已保存 API Key：'+v+'（要更换就输入新 Key 再保存）') : '未保存 API Key（使用真实 LLM 前需保存）';
+}
 async function loadSetup(){
   try{
     const d=await j('/api/status');const st=d.storage||{};const llm=d.llm||{};const sch=d.schedule||{};
     if(st.backend)$('st-backend').value=st.backend;
     const p=llm.provider||'openai_compat';$('llm-provider').value=p;
     renderStorageFields();renderLlmFields();
+    updateKeyHint(d.keys);
     if(st.backend==='mongo'&&st.uri)$('st-uri').value=st.uri;
     if(st.backend==='mongo'&&st.database)$('st-database').value=st.database;
     if(st.backend==='file'){const dd=st.dirs||{};
@@ -625,6 +633,7 @@ async function saveSetup(){
     if(p==='gemini'&&$('llm-key')?.value)keys.GEMINI_API_KEY=$('llm-key').value;
     const schedule={mode:'daily',daily:{wash_classify_time:$('sch-wc').value,generate_time:$('sch-gen').value,catch_up:$('sch-catch').checked}};
     const d=await j('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({storage,llm,schedule,keys})});
+    try{const st2=await j('/api/status');updateKeyHint(st2.keys);}catch(e){}
     $('save-msg').textContent='✓ 已保存：'+d.config;toast('设置已保存');
   }catch(e){toast(e.message);}
 }

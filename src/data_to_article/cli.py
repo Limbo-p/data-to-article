@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 from data_to_article.event.classify import ClassifyEngine
@@ -118,7 +119,29 @@ def _cmd_serve(args) -> int:
     return serve_main(host=args.host, port=args.port, no_browser=args.no_browser)
 
 
+def _load_env_file() -> None:
+    """CLI 启动时把 config/.env 加载进环境变量（面板保存的 API Key 等）。
+
+    仅当对应环境变量尚未设置时才写入，显式设置的环境变量优先级更高。
+    """
+    env_file = PROJECT_ROOT / "config" / ".env"
+    try:
+        if not env_file.exists():
+            return
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, _, v = line.partition("=")
+            k, v = k.strip(), v.strip().strip('"').strip("'")
+            if k and v and k not in os.environ:
+                os.environ[k] = v
+    except Exception:
+        pass
+
+
 def main(argv=None) -> int:
+    _load_env_file()
     parser = argparse.ArgumentParser(prog="dta", description="data-to-article：清洗 -> 归类 -> 二创 流水线")
     sub = parser.add_subparsers(dest="command", required=True)
 

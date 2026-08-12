@@ -13,7 +13,10 @@ if (Test-Path -LiteralPath $venv) { $py = $venv }
 $port = 8765
 $busy = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
 if ($busy) {
-    Start-Process "http://127.0.0.1:$port"
-    exit 0
+    Write-Host "端口 $port 被占用，先停止旧面板进程，再启动新代码..."
+    $busy | ForEach-Object {
+        Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
+    }
+    Start-Sleep -Seconds 1
 }
 & $py -m data_to_article.web.server --host 127.0.0.1 --port $port
