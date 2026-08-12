@@ -74,7 +74,8 @@ def _cmd_generate(args) -> int:
     engine = GenerateEngine(config, storage, llm)
     stats = engine.process_batch(hours=args.hours, limit=args.limit,
                                  dry_run=args.dry_run, event_id=args.event)
-    storage.record_run("generate", "dry_run" if args.dry_run else "ok", stats)
+    status = "dry_run" if args.dry_run else ("ok" if stats.get("ok", 0) > 0 else ("skipped" if stats.get("total", 0) > 0 else "ok"))
+    storage.record_run("generate", status, stats)
     return 0
 
 
@@ -102,7 +103,12 @@ def _cmd_run(args) -> int:
                 llm = create_llm_client(config)
                 engine = GenerateEngine(config, storage, llm)
                 stats = engine.process_batch(hours=args.hours, limit=args.limit, dry_run=args.dry_run)
-            status = "dry_run" if args.dry_run else "ok"
+            if args.dry_run:
+                status = "dry_run"
+            elif name == "generate" and stats.get("ok", 0) == 0 and stats.get("total", 0) > 0:
+                status = "skipped"
+            else:
+                status = "ok"
             storage.record_run(name, status, {"hours": args.hours, "limit": args.limit, **stats})
         except Exception as e:
             print(f"[run] stage {name} failed: {e}")

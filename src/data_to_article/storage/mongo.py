@@ -20,13 +20,21 @@ class MongoBackend(StorageBackend):
         self.client = MongoClient(self.uri, serverSelectionTimeoutMS=5000)
         self.db = self.client[self.database]
         c = collections or {}
-        self.c_raw = self.db[c.get("raw", "raw_articles")]
-        self.c_cleaned = self.db[c.get("cleaned", "articles")]
+        self.c_raw = self._colls(c.get("raw", "raw_articles"))
+        self.c_cleaned = self._colls(c.get("cleaned", "articles"))
+        self._cleaned_write = self.c_cleaned[0]
         self.c_events = self.db[c.get("events", "events")]
         self.c_articles = self.db[c.get("event_articles", "event_articles")]
         self.c_runs = self.db[c.get("runs", "pipeline_runs")]
         self.c_fps = self.db[c.get("fps", "content_fps")]
         self.c_publish = self.db[c.get("publish", "publish_logs")]
+
+    def _colls(self, value, default="articles"):
+        """Split comma-separated collection names into a list of handles."""
+        names = [n.strip() for n in str(value).split(",") if n.strip()]
+        if not names:
+            names = [default]
+        return [self.db[n] for n in names]
 
     @staticmethod
     def _now() -> str:
@@ -36,7 +44,7 @@ class MongoBackend(StorageBackend):
     def save_raw_articles(self, articles: list[dict]) -> int:
         if not articles:
             return 0
-        res = self.c_raw.insert_many([dict(a) for a in articles])
+        res = self.c_raw[0].insert_many([dict(a) for a in articles])
         return len(res.inserted_ids)
 
     def fetch_raw(self, source: str = "", since: Optional[str] = None, limit: int = 0) -> list[dict]:
@@ -45,10 +53,13 @@ class MongoBackend(StorageBackend):
             q["source"] = source
         if since:
             q["pub_time"] = {"$gte": since}
-        cursor = self.c_raw.find(q).sort("pub_time", -1)
+        out = []
+        for coll in self.c_raw:
+            out.extend(coll.find(q))
+        out.sort(key=lambda d: str(d.get("pub_time", "")), reverse=True)
         if limit > 0:
-            cursor = cursor.limit(limit)
-        return list(cursor)
+            out = out[:limit]
+        return out
 
     # ---- cleaned ----
     def upsert_cleaned(self, articles: list[dict]) -> dict:
@@ -65,7 +76,7 @@ class MongoBackend(StorageBackend):
             ops.append(UpdateOne({"content_fp": fp}, {"$set": doc}, upsert=True))
         if not ops:
             return {"inserted": 0, "updated": 0}
-        res = self.c_cleaned.bulk_write(ops)
+        res = self._cleaned_write.bulk_write(ops)
         return {"inserted": res.upserted_count, "updated": max(0, len(ops) - res.upserted_count)}
 
     def fetch_cleaned(self, since: Optional[str] = None, sources: Optional[list[str]] = None, limit: int = 0) -> list[dict]:
@@ -74,16 +85,23 @@ class MongoBackend(StorageBackend):
             q["cleaned_at"] = {"$gte": since}
         if sources:
             q["source"] = {"$in": list(sources)}
-        cursor = self.c_cleaned.find(q).sort("cleaned_at", -1)
+        out = []
+        for coll in self.c_cleaned:
+            out.extend(coll.find(q))
+        out.sort(key=lambda d: str(d.get("cleaned_at", "")), reverse=True)
         if limit > 0:
-            cursor = cursor.limit(limit)
-        return list(cursor)
+            out = out[:limit]
+        return out
 
     def get_cleaned_by_fp(self, fp: str) -> Optional[dict]:
-        return self.c_cleaned.find_one({"content_fp": fp})
+        for coll in self.c_cleaned:
+            a = coll.find_one({"content_fp": fp})
+            if a:
+                return a
+        return None
 
     def content_fp_exists(self, fp: str) -> bool:
-        return self.c_cleaned.find_one({"content_fp": fp}) is not None
+        return self.get_cleaned_by_fp(fp) is not None
 
     # ---- dedup ----
     def claim_content_fp(self, fp: str) -> tuple:
