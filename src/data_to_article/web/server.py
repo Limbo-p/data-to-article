@@ -140,6 +140,13 @@ def _test_storage(body: dict) -> dict:
 def _test_llm(body: dict) -> dict:
     provider = str(body.get("provider") or "mock")
     key = str(body.get("api_key") or "").strip()
+    if not key:
+        env_map = {"openai_compat": "DEEPSEEK_API_KEY",
+                   "anthropic": "ANTHROPIC_API_KEY",
+                   "gemini": "GEMINI_API_KEY"}
+        env_name = env_map.get(provider)
+        if env_name:
+            key = _read_env().get(env_name) or os.environ.get(env_name, "")
     if provider != "mock" and not key:
         return {"ok": False, "error": f"{provider} 需要 API Key"}
     if provider == "mock":
